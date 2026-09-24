@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "LICENSE"
+      - ".gitignore"
+      - "*.txt"
+      - "*.html"
+      - "*.json"
+      - "images/**"
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Typecheck & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Nub
+        run: |
+          curl -fsSL https://nubjs.com/install.sh | bash
+          echo "$HOME/.nub/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: nub install
+
+      - name: Typecheck TypeScript
+        run: nub run typecheck
+
+      - name: Build Standalone Bundle
+        run: nub run build
