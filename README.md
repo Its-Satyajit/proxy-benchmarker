@@ -130,7 +130,7 @@ TIMEOUT=5 CONNECT_TIMEOUT=3 nub update-proxies.ts
 │   ├── config.ts            # Options and defaults
 │   ├── websites.ts          # 50 target websites list
 │   ├── dns.ts               # DNS resolution and public IP check
-│   ├── csv.ts               # ProxyScrape downloader and CSV parser
+│   ├── csv.ts               # Proxifly free-proxy-list downloader and CSV parser
 │   ├── proxy.ts             # Normalization and curl arguments
 │   ├── tester.ts            # 3-stage funnel engine
 │   ├── reporter.ts          # HTML report builder and file exporter
@@ -154,7 +154,7 @@ Pushes to `master` trigger `.github/workflows/release.yml`, which runs `tsc --no
 
 ## Upstream projects and data sources
 
-* [ProxyScrape](https://proxyscrape.com) for proxy list feeds.
+* [proxifly/free-proxy-list](https://github.com/proxifly/free-proxy-list) for raw proxy list data.
 * [cURL](https://curl.se) for network probing.
 * [Iconify](https://iconify.design) for SVG vector icons.
 * [Nub](https://nubjs.com) for Node toolchain execution.
