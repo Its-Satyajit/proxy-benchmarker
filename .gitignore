@@ -1,8 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Benchmark output files & reports
 socks5.txt
 socks4.txt
 https.txt
 http.txt
 benchmark-report.json
 benchmark-report.html
-node_modules/
+*.tmp
+
+# Temporary files & launchers
 .proxy-benchmarker.*
