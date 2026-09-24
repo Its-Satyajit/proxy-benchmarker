@@ -1,13 +1,14 @@
-import path from "node:path";
 import process from "node:process";
 import type { AppConfig, TestEndpoint } from "./types.js";
 import { TOP_50_WEBSITES } from "./websites.js";
 
-const DEFAULT_CONCURRENCY = 100;
-const DEFAULT_TIMEOUT_SECONDS = 4;
-const DEFAULT_CONNECT_TIMEOUT_SECONDS = 3;
-const DEFAULT_WEBSITE_TIMEOUT_SECONDS = 3.5;
-const DEFAULT_WEBSITE_CONNECT_TIMEOUT_SECONDS = 2.5;
+const DEFAULT_CONCURRENCY = 150;
+const DEFAULT_TCP_CONCURRENCY = 600;
+const DEFAULT_TCP_TIMEOUT_MS = 1200;
+const DEFAULT_TIMEOUT_SECONDS = 3.5;
+const DEFAULT_CONNECT_TIMEOUT_SECONDS = 2.5;
+const DEFAULT_WEBSITE_TIMEOUT_SECONDS = 3.0;
+const DEFAULT_WEBSITE_CONNECT_TIMEOUT_SECONDS = 2.0;
 const DEFAULT_WEBSITE_CONCURRENCY = 25;
 const DEFAULT_CLOUDFLARE_DNS = "1.1.1.1";
 const DEFAULT_ENDPOINT_RETRIES = 2;
@@ -28,6 +29,8 @@ export const TEST_ENDPOINTS: TestEndpoint[] = [
 
 export const CONFIG: AppConfig = {
     concurrency: Number.parseInt(process.env.CONCURRENCY || String(DEFAULT_CONCURRENCY), 10),
+    tcpConcurrency: Number.parseInt(process.env.TCP_CONCURRENCY || String(DEFAULT_TCP_CONCURRENCY), 10),
+    tcpTimeoutMs: Number.parseInt(process.env.TCP_TIMEOUT || String(DEFAULT_TCP_TIMEOUT_MS), 10),
     timeoutSeconds: Number.parseFloat(process.env.TIMEOUT || String(DEFAULT_TIMEOUT_SECONDS)),
     connectTimeoutSeconds: Number.parseFloat(process.env.CONNECT_TIMEOUT || String(DEFAULT_CONNECT_TIMEOUT_SECONDS)),
     websiteTimeoutSeconds: Number.parseFloat(process.env.WEBSITE_TIMEOUT || String(DEFAULT_WEBSITE_TIMEOUT_SECONDS)),

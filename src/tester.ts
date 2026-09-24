@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import net from "node:net";
 import { isIP } from "node:net";
 import process from "node:process";
 import type {
@@ -20,6 +21,56 @@ import { buildCurlProxyArgs } from "./proxy.js";
 import { live, ansi, formatPercent, formatRate, formatDuration } from "./terminal.js";
 
 const execFileAsync = promisify(execFile);
+
+/* ============================================================
+ * Ultra-Fast Non-Blocking TCP Socket Port Probe
+ * ============================================================ */
+
+export function checkTcpPort(ip: string, port: number, timeoutMs: number = 1200): Promise<boolean> {
+    return new Promise((resolve) => {
+        const socket = new net.Socket();
+        let isDone = false;
+
+        const cleanup = () => {
+            if (!isDone) {
+                isDone = true;
+                socket.removeAllListeners();
+                socket.destroy();
+            }
+        };
+
+        socket.setTimeout(timeoutMs);
+
+        socket.once("connect", () => {
+            cleanup();
+            resolve(true);
+        });
+
+        socket.once("timeout", () => {
+            cleanup();
+            resolve(false);
+        });
+
+        socket.once("error", () => {
+            cleanup();
+            resolve(false);
+        });
+
+        socket.once("close", () => {
+            if (!isDone) {
+                cleanup();
+                resolve(false);
+            }
+        });
+
+        try {
+            socket.connect(port, ip);
+        } catch {
+            cleanup();
+            resolve(false);
+        }
+    });
+}
 
 /* ============================================================
  * Response Parsing
@@ -86,8 +137,8 @@ export async function testProxyEndpoint(
         "--show-error",
         "--fail-with-body",
         "--noproxy", "",
-        "--connect-timeout", String(config.connectTimeoutSeconds || 3),
-        "--max-time", String(config.timeoutSeconds || 4),
+        "--connect-timeout", String(config.connectTimeoutSeconds || 2.5),
+        "--max-time", String(config.timeoutSeconds || 3.5),
         "-A", "Mozilla/5.0 ProxyScrapeTester",
         "-w", writeOutFormat,
         ...buildCurlProxyArgs(proxy),
@@ -99,7 +150,7 @@ export async function testProxyEndpoint(
 
     args.push(endpoint.url);
 
-    const timeoutMs = ((config.timeoutSeconds || 4) * 1000) + 1500;
+    const timeoutMs = ((config.timeoutSeconds || 3.5) * 1000) + 1000;
 
     let stdout = "";
     let stderr = "";
@@ -220,15 +271,15 @@ export async function testProxyWebsite(
         "--show-error",
         "-o", "/dev/null",
         "--noproxy", "",
-        "--connect-timeout", String(config.websiteConnectTimeoutSeconds || 2.5),
-        "--max-time", String(config.websiteTimeoutSeconds || 3.5),
+        "--connect-timeout", String(config.websiteConnectTimeoutSeconds || 2.0),
+        "--max-time", String(config.websiteTimeoutSeconds || 3.0),
         "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "-w", writeOutFormat,
         ...buildCurlProxyArgs(proxy),
         website.url,
     ];
 
-    const timeoutMs = ((config.websiteTimeoutSeconds || 3.5) * 1000) + 1500;
+    const timeoutMs = ((config.websiteTimeoutSeconds || 3.0) * 1000) + 1000;
 
     let stdout = "";
     let stderr = "";
@@ -324,7 +375,7 @@ function calculateMedian(numbers: number[]): number {
 }
 
 /* ============================================================
- * Fast Health Verification Check (Phase 1)
+ * Fast Health Verification Check (Phase 2)
  * ============================================================ */
 
 export async function verifyProxyHealth(
@@ -358,7 +409,7 @@ export async function verifyProxyHealth(
 }
 
 /* ============================================================
- * Full High-Speed Two-Phase Funnel Benchmark Runner
+ * Turbo Three-Stage Funnel Benchmark Runner
  * ============================================================ */
 
 interface CandidateData {
@@ -380,38 +431,39 @@ export async function runProxyTests(
         socks5: [],
     };
 
-    const aliveCandidates: CandidateData[] = [];
-    let completedPhase1 = 0;
-    let passedPhase1 = 0;
-    let failedPhase1 = 0;
-    let nextIndex1 = 0;
-
-    const startedAt = Date.now();
-    const concurrency = Math.min(Math.max(config.concurrency || 100, 10), proxies.length);
-
     /* ----------------------------------------------------------
-     * PHASE 1: High-Speed Parallel Health Filter (100+ Workers)
+     * STAGE 1: Ultra-Fast Async TCP Port Pre-Filter (500-800 Sockets)
      * ---------------------------------------------------------- */
-    process.stdout.write(`\n${ansi.bold}${ansi.cyan}>> Phase 1: High-Speed Verification & Pruning (${concurrency} parallel workers)${ansi.reset}\n`);
+    const tcpConcurrency = Math.min(Math.max(config.tcpConcurrency || 600, 50), proxies.length);
+    const tcpTimeoutMs = config.tcpTimeoutMs || 1200;
 
-    function renderProgressPhase1() {
-        const elapsed = (Date.now() - startedAt) / 1000;
-        const rate = completedPhase1 > 0 ? completedPhase1 / Math.max(elapsed, 0.001) : 0;
-        const remaining = proxies.length - completedPhase1;
+    process.stdout.write(`\n${ansi.bold}${ansi.cyan}>> Stage 1: Async TCP Socket Pre-Filter (${tcpConcurrency} parallel sockets)${ansi.reset}\n`);
+
+    const stage1StartedAt = Date.now();
+    let completedStage1 = 0;
+    let openPortsCount = 0;
+    let closedPortsCount = 0;
+    let nextIndex1 = 0;
+    const tcpResponsiveProxies: ProxyItem[] = [];
+
+    function renderProgressStage1() {
+        const elapsed = (Date.now() - stage1StartedAt) / 1000;
+        const rate = completedStage1 > 0 ? completedStage1 / Math.max(elapsed, 0.001) : 0;
+        const remaining = proxies.length - completedStage1;
         const eta = rate > 0 ? remaining / rate : Number.NaN;
 
         live(
-            `${ansi.cyan}Phase 1${ansi.reset} ` +
-            `${formatPercent(completedPhase1, proxies.length)}% | ` +
-            `${completedPhase1.toLocaleString()}/${proxies.length.toLocaleString()} | ` +
-            `${ansi.green}[OK] ${passedPhase1} Alive${ansi.reset} | ` +
-            `${ansi.red}[FAIL] ${failedPhase1} Dropped${ansi.reset} | ` +
+            `${ansi.cyan}Stage 1 (TCP)${ansi.reset} ` +
+            `${formatPercent(completedStage1, proxies.length)}% | ` +
+            `${completedStage1.toLocaleString()}/${proxies.length.toLocaleString()} | ` +
+            `${ansi.green}[OK] ${openPortsCount} Open${ansi.reset} | ` +
+            `${ansi.red}[FAIL] ${closedPortsCount} Closed${ansi.reset} | ` +
             `${formatRate(rate)} | ` +
             `ETA ${formatDuration(eta)}`
         );
     }
 
-    async function workerPhase1() {
+    async function workerStage1() {
         while (true) {
             const index = nextIndex1;
             if (index >= proxies.length) return;
@@ -420,73 +472,139 @@ export async function runProxyTests(
             const proxy = proxies[index];
             if (!proxy) continue;
 
-            try {
-                const health = await verifyProxyHealth(proxy, endpoints, config);
-                completedPhase1++;
+            const isOpen = await checkTcpPort(proxy.ip, proxy.port, tcpTimeoutMs);
+            completedStage1++;
 
-                if (health.isAlive) {
-                    passedPhase1++;
-                    aliveCandidates.push({
-                        proxy,
-                        exitIp: health.exitIp,
-                        endpointResults: health.endpointResults,
-                    });
-                } else {
-                    failedPhase1++;
-                }
-            } catch {
-                completedPhase1++;
-                failedPhase1++;
+            if (isOpen) {
+                openPortsCount++;
+                tcpResponsiveProxies.push(proxy);
+            } else {
+                closedPortsCount++;
             }
 
-            renderProgressPhase1();
+            renderProgressStage1();
         }
     }
 
-    const workersPhase1 = Array.from({ length: concurrency }, () => workerPhase1());
-    await Promise.all(workersPhase1);
+    const workersStage1 = Array.from({ length: tcpConcurrency }, () => workerStage1());
+    await Promise.all(workersStage1);
     process.stdout.write("\n");
 
-    const phase1Duration = ((Date.now() - startedAt) / 1000).toFixed(1);
+    const stage1Duration = ((Date.now() - stage1StartedAt) / 1000).toFixed(1);
     process.stdout.write(
-        `  ${ansi.green}[OK] Phase 1 Finished in ${phase1Duration}s${ansi.reset} - ` +
-        `Identified ${ansi.bold}${passedPhase1}${ansi.reset} alive proxies (${failedPhase1} dropped)\n\n`
+        `  ${ansi.green}[OK] Stage 1 Finished in ${stage1Duration}s${ansi.reset} - ` +
+        `Found ${ansi.bold}${openPortsCount.toLocaleString()}${ansi.reset} open TCP ports (${closedPortsCount.toLocaleString()} dropped)\n\n`
     );
 
     /* ----------------------------------------------------------
-     * PHASE 2: Deep Top 50 Websites Benchmark on Alive Proxies
+     * STAGE 2: Proxy Protocol & Exit IP Verification (150+ Workers)
      * ---------------------------------------------------------- */
-    const benchmarkReports: BenchmarkItem[] = [];
+    const aliveCandidates: CandidateData[] = [];
+    const stage2Concurrency = Math.min(Math.max(config.concurrency || 150, 10), Math.max(tcpResponsiveProxies.length, 1));
 
-    if (aliveCandidates.length > 0) {
-        process.stdout.write(`${ansi.bold}${ansi.cyan}>> Phase 2: Top 50 Global Websites Benchmark (${aliveCandidates.length} alive proxies)${ansi.reset}\n`);
+    if (tcpResponsiveProxies.length > 0) {
+        process.stdout.write(`${ansi.bold}${ansi.cyan}>> Stage 2: Health & Exit IP Verification (${stage2Concurrency} parallel workers)${ansi.reset}\n`);
 
-        const phase2StartedAt = Date.now();
-        let completedPhase2 = 0;
+        const stage2StartedAt = Date.now();
+        let completedStage2 = 0;
+        let passedStage2 = 0;
+        let failedStage2 = 0;
         let nextIndex2 = 0;
 
-        function renderProgressPhase2() {
-            const elapsed = (Date.now() - phase2StartedAt) / 1000;
-            const rate = completedPhase2 > 0 ? completedPhase2 / Math.max(elapsed, 0.001) : 0;
-            const remaining = aliveCandidates.length - completedPhase2;
+        function renderProgressStage2() {
+            const elapsed = (Date.now() - stage2StartedAt) / 1000;
+            const rate = completedStage2 > 0 ? completedStage2 / Math.max(elapsed, 0.001) : 0;
+            const remaining = tcpResponsiveProxies.length - completedStage2;
             const eta = rate > 0 ? remaining / rate : Number.NaN;
 
             live(
-                `${ansi.cyan}Phase 2${ansi.reset} ` +
-                `${formatPercent(completedPhase2, aliveCandidates.length)}% | ` +
-                `${completedPhase2.toLocaleString()}/${aliveCandidates.length.toLocaleString()} | ` +
+                `${ansi.cyan}Stage 2 (Verify)${ansi.reset} ` +
+                `${formatPercent(completedStage2, tcpResponsiveProxies.length)}% | ` +
+                `${completedStage2.toLocaleString()}/${tcpResponsiveProxies.length.toLocaleString()} | ` +
+                `${ansi.green}[OK] ${passedStage2} Alive${ansi.reset} | ` +
+                `${ansi.red}[FAIL] ${failedStage2} Dropped${ansi.reset} | ` +
                 `${formatRate(rate)} | ` +
                 `ETA ${formatDuration(eta)}`
             );
         }
 
-        const phase2Concurrency = Math.min(Math.max(Math.floor(concurrency / 2), 10), aliveCandidates.length);
-
-        async function workerPhase2() {
+        async function workerStage2() {
             while (true) {
                 const index = nextIndex2;
-                if (index >= aliveCandidates.length) return;
+                if (index >= tcpResponsiveProxies.length) return;
                 nextIndex2++;
+
+                const proxy = tcpResponsiveProxies[index];
+                if (!proxy) continue;
+
+                try {
+                    const health = await verifyProxyHealth(proxy, endpoints, config);
+                    completedStage2++;
+
+                    if (health.isAlive) {
+                        passedStage2++;
+                        aliveCandidates.push({
+                            proxy,
+                            exitIp: health.exitIp,
+                            endpointResults: health.endpointResults,
+                        });
+                    } else {
+                        failedStage2++;
+                    }
+                } catch {
+                    completedStage2++;
+                    failedStage2++;
+                }
+
+                renderProgressStage2();
+            }
+        }
+
+        const workersStage2 = Array.from({ length: stage2Concurrency }, () => workerStage2());
+        await Promise.all(workersStage2);
+        process.stdout.write("\n");
+
+        const stage2Duration = ((Date.now() - stage2StartedAt) / 1000).toFixed(1);
+        process.stdout.write(
+            `  ${ansi.green}[OK] Stage 2 Finished in ${stage2Duration}s${ansi.reset} - ` +
+            `Verified ${ansi.bold}${passedStage2.toLocaleString()}${ansi.reset} alive proxies (${failedStage2.toLocaleString()} dropped)\n\n`
+        );
+    }
+
+    /* ----------------------------------------------------------
+     * STAGE 3: Deep Top 50 Websites Benchmark on Alive Proxies
+     * ---------------------------------------------------------- */
+    const benchmarkReports: BenchmarkItem[] = [];
+
+    if (aliveCandidates.length > 0) {
+        process.stdout.write(`${ansi.bold}${ansi.cyan}>> Stage 3: Top 50 Global Websites Benchmark (${aliveCandidates.length} alive proxies)${ansi.reset}\n`);
+
+        const stage3StartedAt = Date.now();
+        let completedStage3 = 0;
+        let nextIndex3 = 0;
+
+        function renderProgressStage3() {
+            const elapsed = (Date.now() - stage3StartedAt) / 1000;
+            const rate = completedStage3 > 0 ? completedStage3 / Math.max(elapsed, 0.001) : 0;
+            const remaining = aliveCandidates.length - completedStage3;
+            const eta = rate > 0 ? remaining / rate : Number.NaN;
+
+            live(
+                `${ansi.cyan}Stage 3 (Sites)${ansi.reset} ` +
+                `${formatPercent(completedStage3, aliveCandidates.length)}% | ` +
+                `${completedStage3.toLocaleString()}/${aliveCandidates.length.toLocaleString()} | ` +
+                `${formatRate(rate)} | ` +
+                `ETA ${formatDuration(eta)}`
+            );
+        }
+
+        const stage3Concurrency = Math.min(Math.max(Math.floor(stage2Concurrency / 2), 10), aliveCandidates.length);
+
+        async function workerStage3() {
+            while (true) {
+                const index = nextIndex3;
+                if (index >= aliveCandidates.length) return;
+                nextIndex3++;
 
                 const candidate = aliveCandidates[index];
                 if (!candidate) continue;
@@ -610,13 +728,13 @@ export async function runProxyTests(
                 results[proxy.protocol].push(proxy);
                 benchmarkReports.push(benchmarkData);
 
-                completedPhase2++;
-                renderProgressPhase2();
+                completedStage3++;
+                renderProgressStage3();
             }
         }
 
-        const workersPhase2 = Array.from({ length: phase2Concurrency }, () => workerPhase2());
-        await Promise.all(workersPhase2);
+        const workersStage3 = Array.from({ length: stage3Concurrency }, () => workerStage3());
+        await Promise.all(workersStage3);
         process.stdout.write("\n\n");
     }
 
@@ -641,8 +759,8 @@ export async function runProxyTests(
             passed: benchmarkReports.length,
             failed: proxies.length - benchmarkReports.length,
             localPublicIp,
-            durationSeconds: (Date.now() - startedAt) / 1000,
-            startedAt: new Date(startedAt).toISOString(),
+            durationSeconds: (Date.now() - stage1StartedAt) / 1000,
+            startedAt: new Date(stage1StartedAt).toISOString(),
             completedAt: new Date().toISOString(),
         },
     };

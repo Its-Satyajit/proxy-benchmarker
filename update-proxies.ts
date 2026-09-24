@@ -37,7 +37,8 @@ async function main(): Promise<void> {
 
     log(
         `${ansi.gray}` +
-        `Concurrency: ${CONFIG.concurrency} | ` +
+        `TCP Sockets: ${CONFIG.tcpConcurrency} | ` +
+        `Workers: ${CONFIG.concurrency} | ` +
         `Timeout: ${CONFIG.timeoutSeconds}s | ` +
         `DNS: ${CONFIG.cloudflareDns} | ` +
         `Top Websites: ${CONFIG.benchmarkTopWebsites ? `${CONFIG.topWebsites?.length || 50} sites` : "Disabled"}` +
@@ -84,11 +85,12 @@ async function main(): Promise<void> {
     log("       Benchmarking & Testing Proxies   ");
     log("========================================");
     log("");
-    log(`Stage 1: Health & Exit IP Verification (${endpoints.length} verification endpoints)`);
+    log(`Stage 1: Ultra-Fast Async TCP Socket Pre-Filter (${CONFIG.tcpConcurrency} parallel sockets)`);
+    log(`Stage 2: Health & Exit IP Verification (${endpoints.length} verification endpoints)`);
     if (CONFIG.benchmarkTopWebsites) {
-        log(`Stage 2: Top ${CONFIG.topWebsites?.length || 50} Global Websites Benchmark (Google, Cloudflare, GitHub, etc.)`);
+        log(`Stage 3: Top ${CONFIG.topWebsites?.length || 50} Global Websites Benchmark (Google, Cloudflare, GitHub, etc.)`);
     }
-    log("Stage 3: Composite Best Proxy Scoring & Network Compatibility Ranking\n");
+    log("Stage 4: Composite Best Proxy Scoring & Network Compatibility Ranking\n");
 
     const { results, benchmarks, stats } = await runProxyTests(proxies, endpoints, CONFIG, localPublicIp);
 

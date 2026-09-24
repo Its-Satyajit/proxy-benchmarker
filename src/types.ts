@@ -117,6 +117,8 @@ export interface BenchmarkRunResult {
 
 export interface AppConfig {
     concurrency: number;
+    tcpConcurrency: number;
+    tcpTimeoutMs: number;
     timeoutSeconds: number;
     connectTimeoutSeconds: number;
     websiteTimeoutSeconds: number;
