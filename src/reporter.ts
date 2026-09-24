@@ -568,7 +568,7 @@ export function generateHtmlReport(
 
         .grid-websites {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 10px;
         }
 
@@ -576,14 +576,63 @@ export function generateHtmlReport(
             background-color: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 6px;
-            padding: 8px 12px;
+            padding: 9px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
+            min-width: 0;
+            overflow: hidden;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+        .site-card:hover { background-color: var(--bg-card); }
+
+        .site-card-info {
+            min-width: 0;
+            flex: 1 1 auto;
+            overflow: hidden;
         }
 
-        .site-name { font-weight: 600; font-size: 0.85rem; }
-        .site-domain { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); }
+        .site-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .site-domain {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .site-card-metrics {
+            flex-shrink: 0;
+            text-align: right;
+            max-width: 48%;
+            min-width: 72px;
+            overflow: hidden;
+        }
+
+        .site-metric-val {
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .site-metric-sub {
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
         .font-mono { font-family: var(--font-mono); }
 
@@ -1069,6 +1118,76 @@ export function generateHtmlReport(
             document.body.removeChild(link);
         }
 
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatWebsiteDisplay(ws) {
+            if (ws.ok) {
+                return {
+                    val: ws.totalLatencyMs + ' ms',
+                    valColor: 'var(--success)',
+                    sub: ws.httpCode ? 'HTTP ' + ws.httpCode : '200 OK',
+                    subColor: 'var(--text-muted)',
+                    title: \`\${ws.name} (\${ws.domain}): \${ws.totalLatencyMs}ms - HTTP \${ws.httpCode || 200}\`
+                };
+            }
+
+            const reason = ws.reason || '';
+            let val = 'FAILED';
+            let sub = 'Offline';
+
+            if (ws.httpCode > 0) {
+                val = 'HTTP ' + ws.httpCode;
+                if (ws.httpCode === 403) sub = 'Forbidden';
+                else if (ws.httpCode === 401) sub = 'Unauthorized';
+                else if (ws.httpCode === 404) sub = 'Not Found';
+                else if (ws.httpCode === 429) sub = 'Rate Limited';
+                else if (ws.httpCode === 500) sub = 'Server Error';
+                else if (ws.httpCode === 502) sub = 'Bad Gateway';
+                else if (ws.httpCode === 503) sub = 'Unavailable';
+                else if (ws.httpCode === 504) sub = 'Gateway Timeout';
+                else if (ws.httpCode >= 400 && ws.httpCode < 500) sub = 'Client Error';
+                else if (ws.httpCode >= 500) sub = 'Server Error';
+                else sub = 'Error';
+            } else if (/timed out/i.test(reason) || /curl: \\(28\\)/i.test(reason)) {
+                val = 'Timed Out';
+                sub = 'No Reply';
+            } else if (/refused/i.test(reason) || /curl: \\(7\\)/i.test(reason)) {
+                val = 'Refused';
+                sub = 'Conn Refused';
+            } else if (/reset/i.test(reason) || /recv failure/i.test(reason) || /curl: \\(56\\)/i.test(reason)) {
+                val = 'Reset';
+                sub = 'Conn Dropped';
+            } else if (/empty reply/i.test(reason) || /curl: \\(52\\)/i.test(reason)) {
+                val = 'Empty Reply';
+                sub = '0 Bytes';
+            } else if (/ssl|tls|certificate/i.test(reason) || /curl: \\((35|60)\\)/i.test(reason)) {
+                val = 'SSL Error';
+                sub = 'Handshake Fail';
+            } else if (/resolve|dns/i.test(reason) || /curl: \\(6\\)/i.test(reason)) {
+                val = 'DNS Error';
+                sub = 'Unresolved';
+            } else if (reason) {
+                val = reason.length > 14 ? reason.slice(0, 14) + '...' : reason;
+                sub = 'Failed';
+            }
+
+            return {
+                val,
+                valColor: 'var(--danger)',
+                sub,
+                subColor: 'rgba(239, 68, 68, 0.8)',
+                title: \`\${ws.name} (\${ws.domain}): \${reason || ('HTTP ' + ws.httpCode)}\`
+            };
+        }
+
         function formatSpeed(bytesPerSec) {
             if (!bytesPerSec || bytesPerSec <= 0) return '--';
             if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + ' B/s';
@@ -1274,20 +1393,21 @@ export function generateHtmlReport(
 
                                 \${activeTab === 'websites' ? \`
                                     <div class="grid-websites">
-                                        \${(item.websiteDetails || []).map(ws => \`
-                                            <div class="site-card" style="border-left: 3px solid \${ws.ok ? 'var(--success)' : 'var(--danger)'};">
-                                                <div>
-                                                    <div class="site-name">\${ws.name} <span style="font-size: 0.7rem; color: var(--text-muted);">(\${ws.category})</span></div>
-                                                    <div class="site-domain">\${ws.domain}</div>
+                                        \${(item.websiteDetails || []).map(ws => {
+                                            const d = formatWebsiteDisplay(ws);
+                                            return \`
+                                            <div class="site-card" style="border-left: 3px solid \${ws.ok ? 'var(--success)' : 'var(--danger)'};" title="\${escapeHtml(d.title)}">
+                                                <div class="site-card-info">
+                                                    <div class="site-name">\${escapeHtml(ws.name)} <span style="font-size: 0.7rem; color: var(--text-muted);">(\${escapeHtml(ws.category)})</span></div>
+                                                    <div class="site-domain">\${escapeHtml(ws.domain)}</div>
                                                 </div>
-                                                <div style="text-align: right;">
-                                                    <div class="font-mono" style="font-size: 0.8rem; font-weight: 600; color: \${ws.ok ? 'var(--success)' : 'var(--danger)'};">
-                                                        \${ws.ok ? ws.totalLatencyMs + ' ms' : (ws.reason || 'FAILED')}
-                                                    </div>
-                                                    <div style="font-size: 0.7rem; color: var(--text-muted);">\${ws.httpCode ? 'HTTP ' + ws.httpCode : ''}</div>
+                                                <div class="site-card-metrics">
+                                                    <div class="site-metric-val" style="color: \${d.valColor};">\${escapeHtml(d.val)}</div>
+                                                    <div class="site-metric-sub" style="color: \${d.subColor};">\${escapeHtml(d.sub)}</div>
                                                 </div>
                                             </div>
-                                        \`).join('') || '<div style="color: var(--text-muted); padding: 12px;">No website test data recorded.</div>'}
+                                            \`;
+                                        }).join('') || '<div style="color: var(--text-muted); padding: 12px;">No website test data recorded.</div>'}
                                     </div>
                                 \` : \`
                                     <table style="width: 100%; font-size: 0.8rem; background: var(--bg-secondary); border-radius: 6px;">
@@ -1307,15 +1427,15 @@ export function generateHtmlReport(
                                         <tbody>
                                             \${item.endpointDetails.map(ep => \`
                                                 <tr>
-                                                    <td class="font-mono"><strong>\${ep.name}</strong></td>
-                                                    <td class="font-mono" style="color: var(--text-muted);">\${ep.resolvedIp || '--'}</td>
+                                                    <td class="font-mono"><strong>\${escapeHtml(ep.name)}</strong></td>
+                                                    <td class="font-mono" style="color: var(--text-muted);">\${escapeHtml(ep.resolvedIp || '--')}</td>
                                                     <td>\${ep.ok ? '<span class="pill pill-pass">PASS</span>' : '<span class="pill pill-fail">FAIL</span>'}</td>
                                                     <td class="font-mono">\${ep.httpCode || '--'}</td>
                                                     <td class="font-mono">\${ep.connectTimeMs > 0 ? ep.connectTimeMs + ' ms' : '--'}</td>
                                                     <td class="font-mono">\${ep.ttfbMs > 0 ? ep.ttfbMs + ' ms' : '--'}</td>
                                                     <td class="font-mono" style="font-weight: 600; color: \${ep.ok ? 'var(--success)' : 'var(--danger)'};">\${ep.totalLatencyMs > 0 ? ep.totalLatencyMs + ' ms' : '--'}</td>
-                                                    <td class="font-mono" style="color: var(--accent);">\${ep.returnedIp || '--'}</td>
-                                                    <td style="color: \${ep.ok ? 'var(--text-muted)' : 'var(--danger)'};">\${ep.reason || 'OK'}</td>
+                                                    <td class="font-mono" style="color: var(--accent);">\${escapeHtml(ep.returnedIp || '--')}</td>
+                                                    <td style="color: \${ep.ok ? 'var(--text-muted)' : 'var(--danger)'}; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="\${escapeHtml(ep.reason || 'OK')}">\${escapeHtml(ep.reason || 'OK')}</td>
                                                 </tr>
                                             \`).join('')}
                                         </tbody>
