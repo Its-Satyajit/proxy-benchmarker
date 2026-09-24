@@ -29,7 +29,14 @@ async function fetchLatestBundle(): Promise<string> {
     log(`${ansi.cyan}[INFO] Fetching latest minified release from GitHub (${REPO_OWNER}/${REPO_NAME})...${ansi.reset}`);
 
     const sources = [
-        // 1. GitHub Releases Latest API
+        // 1. Direct GitHub Release Asset Download
+        async () => {
+            const url = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download/${BUNDLE_FILENAME}`;
+            const res = await fetch(url, { redirect: "follow" });
+            if (!res.ok) throw new Error(`Direct release download returned HTTP ${res.status}`);
+            return await res.text();
+        },
+        // 2. GitHub Releases Latest API
         async () => {
             const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`, {
                 headers: { "User-Agent": "Proxy-Benchmarker-Launcher" },
@@ -43,18 +50,18 @@ async function fetchLatestBundle(): Promise<string> {
             if (!fileRes.ok) throw new Error(`Asset download failed with HTTP ${fileRes.status}`);
             return await fileRes.text();
         },
-        // 2. Raw GitHub Main Branch Fallback
-        async () => {
-            const url = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/${BUNDLE_FILENAME}`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`Raw GitHub returned HTTP ${res.status}`);
-            return await res.text();
-        },
         // 3. Raw GitHub Master Branch Fallback
         async () => {
             const url = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/master/dist/${BUNDLE_FILENAME}`;
             const res = await fetch(url);
             if (!res.ok) throw new Error(`Raw master returned HTTP ${res.status}`);
+            return await res.text();
+        },
+        // 4. Raw GitHub Main Branch Fallback
+        async () => {
+            const url = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/${BUNDLE_FILENAME}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Raw main returned HTTP ${res.status}`);
             return await res.text();
         },
     ];

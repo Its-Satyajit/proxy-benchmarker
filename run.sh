@@ -3,8 +3,9 @@ set -e
 
 REPO_OWNER="Its-Satyajit"
 REPO_NAME="proxy-benchmarker"
-BUNDLE_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/master/dist/proxy-benchmarker.min.mjs"
-BUNDLE_URL_FALLBACK="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/proxy-benchmarker.min.mjs"
+RELEASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download/proxy-benchmarker.min.mjs"
+RAW_MASTER_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/master/dist/proxy-benchmarker.min.mjs"
+RAW_MAIN_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/proxy-benchmarker.min.mjs"
 TEMP_FILE="/tmp/proxy-benchmarker.$$.mjs"
 REPORT_FILE="$(pwd)/benchmark-report.html"
 
@@ -19,12 +20,14 @@ echo "   Proxy Benchmark Launcher & Auto-Run  "
 echo "========================================"
 echo ""
 
-# Download latest minified bundle
-echo "[INFO] Fetching latest proxy benchmark bundle from GitHub..."
-if curl -fsSL "$BUNDLE_URL" -o "$TEMP_FILE" 2>/dev/null; then
-    echo "[OK] Downloaded latest bundle."
-elif curl -fsSL "$BUNDLE_URL_FALLBACK" -o "$TEMP_FILE" 2>/dev/null; then
-    echo "[OK] Downloaded latest bundle (master branch)."
+# Download latest minified bundle (releases/latest/download -> raw master -> raw main -> local)
+echo "[INFO] Fetching latest proxy benchmark bundle from GitHub Release..."
+if curl -fsSL "$RELEASE_URL" -o "$TEMP_FILE" 2>/dev/null; then
+    echo "[OK] Downloaded latest release asset."
+elif curl -fsSL "$RAW_MASTER_URL" -o "$TEMP_FILE" 2>/dev/null; then
+    echo "[OK] Downloaded latest bundle from master branch."
+elif curl -fsSL "$RAW_MAIN_URL" -o "$TEMP_FILE" 2>/dev/null; then
+    echo "[OK] Downloaded latest bundle from main branch."
 elif [ -f "./dist/proxy-benchmarker.min.mjs" ]; then
     echo "[WARN] Using local bundle: ./dist/proxy-benchmarker.min.mjs"
     TEMP_FILE="./dist/proxy-benchmarker.min.mjs"
