@@ -53,9 +53,8 @@ $$\text{Final score} = (\text{Usability ratio} \times 50\text{ pts}) + (\text{Pe
 ## Local development
 
 ### Requirements
-* Node.js v18+ or nub
-* curl
-* dig (`bind-utils` or `dnsutils`)
+* Node.js v18+ or nub (Linux, macOS, Windows)
+* curl (standard on Linux, macOS, Windows 10/11)
 
 ### Commands
 
