@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import dns from "node:dns/promises";
 import { isIP } from "node:net";
 import type { AppConfig, TestEndpoint } from "./types.js";
 import { log, ansi, sleep } from "./terminal.js";
@@ -20,7 +21,7 @@ export async function getLocalPublicIp(): Promise<string | null> {
                 "--insecure",
                 "--max-time", "5",
                 url
-            ], { timeout: 6000 });
+            ], { timeout: 6000, windowsHide: true });
 
             const ip = stdout.trim();
             if (isIP(ip) === 4) {
@@ -38,6 +39,7 @@ export async function checkExecutable(command: string, args: string[]): Promise<
         await execFileAsync(command, args, {
             timeout: 5000,
             maxBuffer: 1024 * 1024,
+            windowsHide: true,
         });
         return true;
     } catch {
@@ -48,7 +50,6 @@ export async function checkExecutable(command: string, args: string[]): Promise<
 export async function checkDependencies(): Promise<void> {
     const dependencies: [string, string[]][] = [
         ["curl", ["--version"]],
-        ["dig", ["-v"]],
     ];
 
     for (const [command, args] of dependencies) {
@@ -73,28 +74,26 @@ export function parseUrl(url: string): { protocol: string; hostname: string; por
 }
 
 export async function resolveIPv4(hostname: string, dnsServer: string = "1.1.1.1"): Promise<string[]> {
-    const attempts: [string, string, string, ...string[]][] = [
-        [`@${dnsServer}`, "A", hostname, "+short"],
-        [`@${dnsServer}`, "A", hostname, "+short", "+tcp"],
-    ];
-
-    for (const args of attempts) {
+    try {
+        const resolver = new dns.Resolver({ timeout: 4000, tries: 2 });
+        if (dnsServer) {
+            resolver.setServers([dnsServer]);
+        }
+        const addresses = await resolver.resolve4(hostname);
+        const validIps = addresses.filter((value: string): value is string => isIP(value) === 4);
+        if (validIps.length > 0) {
+            return Array.from(new Set(validIps));
+        }
+    } catch {
+        // Fallback to default system DNS
         try {
-            const { stdout } = await execFileAsync("dig", args, {
-                timeout: 5000,
-                maxBuffer: 1024 * 1024,
-            });
-
-            const addresses: string[] = stdout
-                .split(/\r?\n/)
-                .map((value: string) => value.trim())
-                .filter((value: string): value is string => isIP(value) === 4);
-
-            if (addresses.length > 0) {
-                return Array.from(new Set(addresses));
+            const addresses = await dns.resolve4(hostname);
+            const validIps = addresses.filter((value: string): value is string => isIP(value) === 4);
+            if (validIps.length > 0) {
+                return Array.from(new Set(validIps));
             }
         } catch {
-            // Try next attempt
+            // Unresolved
         }
     }
 
