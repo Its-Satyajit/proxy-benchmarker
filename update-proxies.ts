@@ -2,25 +2,26 @@
 
 import path from "node:path";
 import process from "node:process";
-import { CONFIG } from "./src/config.mjs";
-import { log, ansi } from "./src/terminal.mjs";
-import { checkDependencies, prepareEndpoints, getLocalPublicIp } from "./src/dns.mjs";
-import { downloadCsv, parseCsv } from "./src/csv.mjs";
-import { deduplicateProxies } from "./src/proxy.mjs";
-import { runProxyTests } from "./src/tester.mjs";
+import type { Protocol } from "./src/types.js";
+import { CONFIG } from "./src/config.js";
+import { log, ansi } from "./src/terminal.js";
+import { checkDependencies, prepareEndpoints, getLocalPublicIp } from "./src/dns.js";
+import { downloadCsv, parseCsv } from "./src/csv.js";
+import { deduplicateProxies } from "./src/proxy.js";
+import { runProxyTests } from "./src/tester.js";
 import {
     writeProxyFiles,
     generateHtmlReport,
     writeJsonReport,
     atomicWrite,
     printSummary
-} from "./src/reporter.mjs";
+} from "./src/reporter.js";
 
 /* ============================================================
  * Main Workflow
  * ============================================================ */
 
-async function main() {
+async function main(): Promise<void> {
     log("");
     log("========================================");
     log("   Proxy Benchmark & Best Network Finder ");
@@ -29,10 +30,10 @@ async function main() {
 
     // 1. Dependency Checks & Network Context
     await checkDependencies();
-    log(`${ansi.green}✓${ansi.reset} curl and dig are available`);
+    log(`${ansi.green}[OK]${ansi.reset} curl and dig are available`);
 
     const localPublicIp = await getLocalPublicIp();
-    log(`${ansi.cyan}ℹ${ansi.reset} Local Network Public IP: ${ansi.bold}${localPublicIp || "Direct / Unknown"}${ansi.reset}`);
+    log(`${ansi.cyan}[INFO]${ansi.reset} Local Network Public IP: ${ansi.bold}${localPublicIp || "Direct / Unknown"}${ansi.reset}`);
 
     log(
         `${ansi.gray}` +
@@ -68,13 +69,13 @@ async function main() {
         proxies = proxies.slice(0, CONFIG.limit);
     }
 
-    const discovered = { http: 0, https: 0, socks4: 0, socks5: 0 };
+    const discovered: Record<Protocol, number> = { http: 0, https: 0, socks4: 0, socks5: 0 };
     for (const proxy of proxies) {
         discovered[proxy.protocol]++;
     }
 
     log(`  Discovered ${proxies.length.toLocaleString()} unique proxies\n`);
-    for (const protocol of ["http", "https", "socks4", "socks5"]) {
+    for (const protocol of ["http", "https", "socks4", "socks5"] as Protocol[]) {
         log(`  ${protocol.toUpperCase().padEnd(7)} ${discovered[protocol].toLocaleString()}`);
     }
 

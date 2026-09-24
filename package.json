@@ -3,12 +3,29 @@
   "version": "1.0.0",
   "description": "High-performance modular proxy tester and benchmark report generator",
   "type": "module",
-  "main": "update-proxies.mjs",
+  "main": "update-proxies.ts",
   "scripts": {
-    "start": "node update-proxies.mjs",
-    "benchmark": "node update-proxies.mjs"
+    "start": "nub update-proxies.ts",
+    "benchmark": "nub update-proxies.ts",
+    "launcher": "nub launcher.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild update-proxies.ts --bundle --platform=node --format=esm --minify --outfile=dist/proxy-benchmarker.min.mjs"
   },
-  "keywords": ["proxy", "tester", "benchmark", "socks5", "socks4", "http", "https"],
+  "keywords": [
+    "proxy",
+    "tester",
+    "benchmark",
+    "socks5",
+    "socks4",
+    "http",
+    "https",
+    "typescript"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
 }

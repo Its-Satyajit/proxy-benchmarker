@@ -12,21 +12,21 @@ export const ansi = {
     blue: "\x1b[34m",
     magenta: "\x1b[35m",
     gray: "\x1b[90m",
-};
+} as const;
 
-export function log(message = "") {
+export function log(message: string = ""): void {
     process.stdout.write(`${message}\n`);
 }
 
-export function live(message) {
+export function live(message: string): void {
     process.stdout.write(`\r${ansi.clearLine}${message}`);
 }
 
-export function sleep(ms) {
+export function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function formatDuration(seconds) {
+export function formatDuration(seconds: number): string {
     if (!Number.isFinite(seconds) || seconds < 0) {
         return "--";
     }
@@ -45,26 +45,26 @@ export function formatDuration(seconds) {
     return `${secs}s`;
 }
 
-export function formatRate(value) {
+export function formatRate(value: number): string {
     if (!Number.isFinite(value) || value <= 0) {
         return "0.0/s";
     }
     return `${value.toFixed(1)}/s`;
 }
 
-export function formatPercent(current, total) {
+export function formatPercent(current: number, total: number): string {
     if (!total) {
         return "0.0";
     }
     return ((current / total) * 100).toFixed(1);
 }
 
-export function formatMs(ms) {
+export function formatMs(ms: number): string {
     if (!Number.isFinite(ms) || ms < 0) return "--";
     return `${Math.round(ms)} ms`;
 }
 
-export function formatSpeed(bytesPerSec) {
+export function formatSpeed(bytesPerSec: number): string {
     if (!Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return "0 B/s";
     if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`;
     if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;

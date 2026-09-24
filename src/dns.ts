@@ -1,11 +1,12 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { isIP } from "node:net";
-import { log, ansi, sleep } from "./terminal.mjs";
+import type { AppConfig, TestEndpoint } from "./types.js";
+import { log, ansi, sleep } from "./terminal.js";
 
 const execFileAsync = promisify(execFile);
 
-export async function getLocalPublicIp() {
+export async function getLocalPublicIp(): Promise<string | null> {
     const urls = [
         "https://api.ipify.org",
         "https://icanhazip.com",
@@ -32,7 +33,7 @@ export async function getLocalPublicIp() {
     return null;
 }
 
-export async function checkExecutable(command, args) {
+export async function checkExecutable(command: string, args: string[]): Promise<boolean> {
     try {
         await execFileAsync(command, args, {
             timeout: 5000,
@@ -44,8 +45,8 @@ export async function checkExecutable(command, args) {
     }
 }
 
-export async function checkDependencies() {
-    const dependencies = [
+export async function checkDependencies(): Promise<void> {
+    const dependencies: [string, string[]][] = [
         ["curl", ["--version"]],
         ["dig", ["-v"]],
     ];
@@ -58,21 +59,21 @@ export async function checkDependencies() {
     }
 }
 
-export function parseUrl(url) {
+export function parseUrl(url: string): { protocol: string; hostname: string; port: number } {
     const parsed = new URL(url);
     return {
         protocol: parsed.protocol.replace(":", ""),
         hostname: parsed.hostname,
         port: parsed.port
-            ? Number(parsed.port)
+            ? Number.parseInt(parsed.port, 10)
             : parsed.protocol === "https:"
             ? 443
             : 80,
     };
 }
 
-export async function resolveIPv4(hostname, dnsServer = "1.1.1.1") {
-    const attempts = [
+export async function resolveIPv4(hostname: string, dnsServer: string = "1.1.1.1"): Promise<string[]> {
+    const attempts: [string, string, string, ...string[]][] = [
         [`@${dnsServer}`, "A", hostname, "+short"],
         [`@${dnsServer}`, "A", hostname, "+short", "+tcp"],
     ];
@@ -84,13 +85,13 @@ export async function resolveIPv4(hostname, dnsServer = "1.1.1.1") {
                 maxBuffer: 1024 * 1024,
             });
 
-            const addresses = stdout
+            const addresses: string[] = stdout
                 .split(/\r?\n/)
-                .map((value) => value.trim())
-                .filter((value) => isIP(value) === 4);
+                .map((value: string) => value.trim())
+                .filter((value: string): value is string => isIP(value) === 4);
 
             if (addresses.length > 0) {
-                return [...new Set(addresses)];
+                return Array.from(new Set(addresses));
             }
         } catch {
             // Try next attempt
@@ -100,11 +101,11 @@ export async function resolveIPv4(hostname, dnsServer = "1.1.1.1") {
     return [];
 }
 
-export async function resolveOneIPv4(hostname, dnsServer = "1.1.1.1", retries = 3) {
+export async function resolveOneIPv4(hostname: string, dnsServer: string = "1.1.1.1", retries: number = 3): Promise<string | null> {
     for (let attempt = 1; attempt <= retries; attempt++) {
         const addresses = await resolveIPv4(hostname, dnsServer);
         if (addresses.length > 0) {
-            return addresses[(attempt - 1) % addresses.length];
+            return addresses[(attempt - 1) % addresses.length] ?? null;
         }
         if (attempt < retries) {
             await sleep(1000);
@@ -113,12 +114,12 @@ export async function resolveOneIPv4(hostname, dnsServer = "1.1.1.1", retries = 
     return null;
 }
 
-export async function prepareEndpoints(testEndpoints, config) {
+export async function prepareEndpoints(testEndpoints: TestEndpoint[], config: AppConfig): Promise<TestEndpoint[]> {
     log(`${ansi.cyan}Resolving test endpoints using DNS (${config.cloudflareDns})...${ansi.reset}`);
     log(`${ansi.gray}Retries: ${config.endpointRetries}${ansi.reset}\n`);
 
-    const enabled = [];
-    const disabled = [];
+    const enabled: TestEndpoint[] = [];
+    const disabled: TestEndpoint[] = [];
 
     for (const endpoint of testEndpoints) {
         const target = parseUrl(endpoint.url);
@@ -131,8 +132,8 @@ export async function prepareEndpoints(testEndpoints, config) {
         if (!resolvedIp) {
             disabled.push(endpoint);
             log(
-                `  ${ansi.red}✗${ansi.reset} ${endpoint.name.padEnd(24)} ` +
-                `${ansi.gray}DNS resolution failed → disabled for this run${ansi.reset}`
+                `  ${ansi.red}[FAIL]${ansi.reset} ${endpoint.name.padEnd(24)} ` +
+                `${ansi.gray}DNS resolution failed -> disabled for this run${ansi.reset}`
             );
             continue;
         }
@@ -143,7 +144,7 @@ export async function prepareEndpoints(testEndpoints, config) {
         });
 
         log(
-            `  ${ansi.green}✓${ansi.reset} ${endpoint.name.padEnd(24)} ` +
+            `  ${ansi.green}[OK]${ansi.reset}   ${endpoint.name.padEnd(24)} ` +
             `${ansi.gray}${resolvedIp}${ansi.reset}`
         );
     }
@@ -155,13 +156,13 @@ export async function prepareEndpoints(testEndpoints, config) {
     }
 
     log(
-        `${ansi.green}✓ ${enabled.length}/${testEndpoints.length} ` +
+        `${ansi.green}[OK] ${enabled.length}/${testEndpoints.length} ` +
         `test endpoints enabled${ansi.reset}`
     );
 
     if (disabled.length > 0) {
         log(
-            `${ansi.yellow}⚠ ${disabled.length} endpoint(s) disabled because DNS resolution failed.${ansi.reset}`
+            `${ansi.yellow}[WARN] ${disabled.length} endpoint(s) disabled because DNS resolution failed.${ansi.reset}`
         );
         log(
             `${ansi.gray}Proxies will be tested against the remaining ${enabled.length} endpoint(s).${ansi.reset}`
