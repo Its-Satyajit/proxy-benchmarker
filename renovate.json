@@ -7,8 +7,9 @@
     ":automergePatch",
     ":automergeDigest"
   ],
-  "platformAutomerge": true,
+  "automerge": true,
   "automergeType": "pr",
+  "platformAutomerge": true,
   "ignoreTests": false,
   "labels": [
     "dependencies",
@@ -16,36 +17,9 @@
   ],
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
-  "rangeStrategy": "bump",
   "packageRules": [
     {
-      "description": "Automerge non-major npm updates when CI passes",
-      "matchDatasources": [
-        "npm"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "automerge": true
-    },
-    {
-      "description": "Automerge GitHub Actions updates when CI passes",
-      "matchManagers": [
-        "github-actions"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "automerge": true
-    },
-    {
-      "description": "Group development dependency updates",
+      "description": "Group devDependencies and enable automerge",
       "matchDepTypes": [
         "devDependencies"
       ],
@@ -53,10 +27,11 @@
       "matchUpdateTypes": [
         "minor",
         "patch"
-      ]
+      ],
+      "automerge": true
     },
     {
-      "description": "Group GitHub Actions workflow updates",
+      "description": "Group GitHub Actions updates and enable automerge",
       "matchManagers": [
         "github-actions"
       ],
@@ -66,10 +41,11 @@
         "patch",
         "pin",
         "digest"
-      ]
+      ],
+      "automerge": true
     },
     {
-      "description": "Keep major updates manual for review",
+      "description": "Require manual review for major version updates",
       "matchUpdateTypes": [
         "major"
       ],
