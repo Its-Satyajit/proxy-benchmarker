@@ -1,22 +1,22 @@
-# Security Policy
+# Security policy
 
-## Supported Versions
+## Supported versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | Yes                |
+| Version | Supported |
+| ------- | --------- |
+| 1.0.x   | Yes       |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-If you discover a security vulnerability within this project, please open a private security advisory on GitHub or contact the maintainers directly.
+To report a vulnerability, open a private security advisory on GitHub.
 
-Please include:
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
+Include:
+* Description of the issue
+* Steps to reproduce
+* Impact assessment
 
-## Public Proxy Disclaimer & Safe Usage
+## Public proxy security notes
 
-- **Untrusted Traffic**: Public proxies route traffic through third-party servers operated by unknown entities. Never send sensitive credentials, plaintext passwords, private API keys, or unencrypted personal data through public proxies.
-- **SSL/TLS Encryption**: Always verify that connections to target destinations use HTTPS/TLS with valid certificates.
-- **Network Rate Limits**: Ensure your benchmark runs comply with network and rate-limiting policies of target hosts.
+* Public proxies route traffic through third-party servers operated by unknown entities. Never send credentials, session tokens, passwords, or unencrypted data through public proxies.
+* Verify that connections use HTTPS/TLS with valid certificates.
+* Follow the rate limits and terms of service of target hosts.

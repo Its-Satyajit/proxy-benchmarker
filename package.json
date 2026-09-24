@@ -1,7 +1,7 @@
 {
   "name": "proxy-benchmarker",
   "version": "1.0.0",
-  "description": "High-performance modular proxy tester and benchmark report generator",
+  "description": "Proxy benchmark and network finder for local networks",
   "type": "module",
   "main": "update-proxies.ts",
   "scripts": {

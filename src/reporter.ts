@@ -105,7 +105,7 @@ export function generateHtmlReport(
 
     const bestProxyHtml = bestProxy ? `
         <div class="hero-card" id="best-proxy-hero">
-            <div class="hero-badge">${SVG_ICONS.trophy} TOP RECOMMENDED PROXY FOR YOUR NETWORK</div>
+            <div class="hero-badge">${SVG_ICONS.trophy} TOP CANDIDATE FOR YOUR NETWORK</div>
             <div class="hero-main">
                 <div class="hero-left">
                     <div class="hero-title font-mono" id="hero-proxy-url">${bestProxy.proxy.protocol.toUpperCase()}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}</div>
@@ -148,7 +148,7 @@ export function generateHtmlReport(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Best Proxy Benchmark Report - Multi-Factor Weighted Ranking</title>
+    <title>Proxy Benchmark Report</title>
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -745,8 +745,8 @@ export function generateHtmlReport(
     <div class="container">
         <header>
             <div class="title-group">
-                <h1><span class="badge-pulse"></span> Proxy Benchmark & Best Network Finder</h1>
-                <p>Testing from your network (<span class="font-mono">${stats.localPublicIp || 'Direct'}</span>) &bull; Multi-Factor Weighted Scoring Across All Columns & <strong>Top 50 Global Websites</strong></p>
+                <h1><span class="badge-pulse"></span> Proxy Benchmark & Network Finder</h1>
+                <p>Testing from your network (<span class="font-mono">${stats.localPublicIp || 'Direct'}</span>) &bull; Ranked by website reachability and latency</p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="btn" onclick="toggleWeightsPanel()">${SVG_ICONS.settings} Scoring Weights</button>
@@ -759,10 +759,10 @@ export function generateHtmlReport(
         <!-- Dynamic Scoring Weights Panel -->
         <div id="weights-panel" class="weights-panel">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 6px;">${SVG_ICONS.settings} Customize Multi-Factor Ranking Weights</h3>
+                <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 6px;">${SVG_ICONS.settings} Customize Ranking Weights</h3>
                 <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="resetDefaultWeights()">Reset Defaults</button>
             </div>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Adjust weights across all table columns. Scores and ranks recalculate in real-time.</p>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Change column weights to recalculate rankings in real time.</p>
             <div class="weights-grid">
                 <div class="weight-item">
                     <div class="weight-header"><span>${SVG_ICONS.globe} Top 50 Sites</span><span id="w-val-websites">30%</span></div>
@@ -905,7 +905,7 @@ export function generateHtmlReport(
         </div>
 
         <div class="footer-note">
-            Proxy Benchmark Suite &bull; Multi-Factor Weighted Ranking &bull; Full details saved to <span class="font-mono">benchmark-report.json</span>
+            Full telemetry and benchmark details saved to <span class="font-mono">benchmark-report.json</span>
         </div>
     </div>
 
