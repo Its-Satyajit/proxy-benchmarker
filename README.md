@@ -163,6 +163,39 @@ Every push to the `main` or `master` branch automatically:
 
 ---
 
+## Credits & Upstream Projects
+
+Special thanks and acknowledgement to the open-source projects and services that make this tool possible:
+
+* **[ProxyScrape](https://proxyscrape.com)**: For providing regularly updated public proxy community lists and feeds.
+* **[cURL Project](https://curl.se)**: For the high-performance command line tool and engine used in network probing.
+* **[Iconify](https://iconify.design)**: For clean SVG vector icon sets used across reports and UI.
+* **[Nub](https://nubjs.com)**: For fast Node.js toolchain execution and task running.
+* **[esbuild](https://esbuild.github.io)**: For high-speed JavaScript/TypeScript bundling and minification.
+* **Public IP & DNS Endpoints**:
+  * [Cloudflare](https://www.cloudflare.com) (1.1.1.1 DNS & Speed test endpoints)
+  * [Google Public DNS](https://developers.google.com/speed/public-dns)
+  * [icanhazip.com](https://icanhazip.com)
+  * [ifconfig.co](https://ifconfig.co)
+  * [ipify.org](https://www.ipify.org)
+  * [ip-api.com](https://ip-api.com)
+  * [seeip.org](https://seeip.org)
+  * [myip.la](https://myip.la)
+
+---
+
+## Contributing
+
+Please review [CONTRIBUTING.md](file:///home/satyajit/Desktop/proxies/CONTRIBUTING.md) for contribution guidelines, development workflows, and standards.
+
+---
+
+## Security
+
+Please review [SECURITY.md](file:///home/satyajit/Desktop/proxies/SECURITY.md) for vulnerability reporting and safe public proxy usage guidelines.
+
+---
+
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](file:///home/satyajit/Desktop/proxies/LICENSE) file for details.
