@@ -2,9 +2,9 @@
 set -e
 
 REPO_OWNER="Its-Satyajit"
-REPO_NAME="proxies"
-BUNDLE_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/proxy-benchmarker.min.mjs"
-BUNDLE_URL_FALLBACK="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/master/dist/proxy-benchmarker.min.mjs"
+REPO_NAME="proxy-benchmarker"
+BUNDLE_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/master/dist/proxy-benchmarker.min.mjs"
+BUNDLE_URL_FALLBACK="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/proxy-benchmarker.min.mjs"
 TEMP_FILE="/tmp/proxy-benchmarker.$$.mjs"
 REPORT_FILE="$(pwd)/benchmark-report.html"
 

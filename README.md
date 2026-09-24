@@ -9,7 +9,7 @@ A high-performance, modular proxy benchmarking suite in TypeScript v7 designed t
 Fetch the latest release, run the benchmark, and automatically launch the HTML report in your browser:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxies/main/run.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.sh | bash
 ```
 
 Or using nub:
@@ -76,8 +76,8 @@ $$\text{Final Score} = (\text{Usability Ratio} \times 50\text{ pts}) + \text{Per
 
 ```bash
 # Clone the repository
-git clone https://github.com/Its-Satyajit/proxies.git
-cd proxies
+git clone https://github.com/Its-Satyajit/proxy-benchmarker.git
+cd proxy-benchmarker
 
 # Install dependencies with nub
 nub install

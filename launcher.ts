@@ -6,7 +6,7 @@ import process from "node:process";
 import { exec, spawn } from "node:child_process";
 
 const REPO_OWNER = "Its-Satyajit";
-const REPO_NAME = "proxies";
+const REPO_NAME = "proxy-benchmarker";
 const BUNDLE_FILENAME = "proxy-benchmarker.min.mjs";
 const TMP_BUNDLE_PATH = path.join(process.cwd(), ".proxy-benchmarker.latest.mjs");
 const REPORT_PATH = path.join(process.cwd(), "benchmark-report.html");
