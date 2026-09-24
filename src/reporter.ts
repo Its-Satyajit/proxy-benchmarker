@@ -1,30 +1,73 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { CONFIG } from "./config.mjs";
-import { log, ansi, formatDuration, formatMs, formatSpeed } from "./terminal.mjs";
-import { proxyOutputUrl } from "./proxy.mjs";
+import type {
+    AppConfig,
+    BenchmarkItem,
+    BenchmarkStats,
+    Protocol,
+    ProxyItem,
+    TestEndpoint
+} from "./types.js";
+import { CONFIG } from "./config.js";
+import { log, ansi, formatDuration } from "./terminal.js";
+import { proxyOutputUrl } from "./proxy.js";
 
-export async function atomicWrite(filePath, contents) {
+export async function atomicWrite(filePath: string, contents: string): Promise<void> {
     const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
     await fs.writeFile(tempPath, contents, "utf8");
     await fs.rename(tempPath, filePath);
 }
 
-export async function writeProxyFiles(results, config) {
-    for (const [protocol, filename] of Object.entries(config.outputFiles)) {
+export async function writeProxyFiles(
+    results: Record<Protocol, ProxyItem[]>,
+    config: AppConfig
+): Promise<void> {
+    for (const [protocol, filename] of Object.entries(config.outputFiles) as [Protocol, string][]) {
         const entries = results[protocol].map(proxyOutputUrl);
         const contents = entries.length > 0 ? `${entries.join("\n")}\n` : "";
         await atomicWrite(path.join(config.outputDir, filename), contents);
     }
 }
 
-export async function writeJsonReport(benchmarkData, outputPath) {
-    const jsonContent = JSON.stringify(benchmarkData, null, 2);
+export async function writeJsonReport(
+    reportData: {
+        generatedAt: string;
+        stats: BenchmarkStats;
+        endpoints: TestEndpoint[];
+        benchmarks: BenchmarkItem[];
+    },
+    outputPath: string
+): Promise<void> {
+    const jsonContent = JSON.stringify(reportData, null, 2);
     await atomicWrite(outputPath, jsonContent);
 }
 
-export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outputPath) {
+// Inline SVG Icons
+const SVG_ICONS = {
+    trophy: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,
+    globe: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+    shield: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`,
+    settings: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    copy: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
+    download: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
+    search: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+    bolt: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+    rocket: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>`,
+    plug: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>`,
+    clock: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    gauge: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>`,
+    alert: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`,
+    chevronRight: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+    chevronDown: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+};
+
+export function generateHtmlReport(
+    benchmarkData: BenchmarkItem[],
+    stats: BenchmarkStats,
+    enabledEndpoints: TestEndpoint[],
+    _outputPath: string
+): string {
     const bestProxy = benchmarkData.length > 0 ? benchmarkData[0] : null;
 
     const avgPassLatency = benchmarkData.length > 0
@@ -35,7 +78,7 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         ? [...benchmarkData].sort((a, b) => a.avgLatencyMs - b.avgLatencyMs)[0]
         : null;
 
-    const protocolCounts = {
+    const protocolCounts: Record<Protocol, { total: number; passed: number }> = {
         http: { total: 0, passed: 0 },
         https: { total: 0, passed: 0 },
         socks4: { total: 0, passed: 0 },
@@ -62,14 +105,14 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
 
     const bestProxyHtml = bestProxy ? `
         <div class="hero-card" id="best-proxy-hero">
-            <div class="hero-badge">🏆 TOP RECOMMENDED PROXY FOR YOUR NETWORK</div>
+            <div class="hero-badge">${SVG_ICONS.trophy} TOP RECOMMENDED PROXY FOR YOUR NETWORK</div>
             <div class="hero-main">
                 <div class="hero-left">
                     <div class="hero-title font-mono" id="hero-proxy-url">${bestProxy.proxy.protocol.toUpperCase()}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}</div>
                     <div class="hero-meta" id="hero-proxy-meta">
-                        <span>🌍 ${bestProxy.proxy.country || 'Global'}</span> • 
-                        <span>🛡️ ${bestProxy.anonymity}</span> • 
-                        <span>🌐 ${bestProxy.websitesPassed}/${bestProxy.websitesTotal} Top Websites Reachable (${bestProxy.websitePassRatePercent}%)</span>
+                        <span>${SVG_ICONS.globe} ${bestProxy.proxy.country || 'Global'}</span> &bull; 
+                        <span>${SVG_ICONS.shield} ${bestProxy.anonymity}</span> &bull; 
+                        <span>${SVG_ICONS.globe} ${bestProxy.websitesPassed}/${bestProxy.websitesTotal} Top Websites Reachable (${bestProxy.websitePassRatePercent}%)</span>
                     </div>
                 </div>
                 <div class="hero-stats">
@@ -86,14 +129,14 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
                         <div class="hero-stat-value" id="hero-connect">${bestProxy.avgConnectTimeMs} ms</div>
                     </div>
                     <div>
-                        <button class="btn btn-primary" id="hero-copy-btn" onclick="copyToClipboard('${bestProxy.proxy.protocol}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}')">📋 Copy Best Proxy</button>
+                        <button class="btn btn-primary" id="hero-copy-btn" onclick="copyToClipboard('${bestProxy.proxy.protocol}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}')">${SVG_ICONS.copy} Copy Best Proxy</button>
                     </div>
                 </div>
             </div>
         </div>
     ` : `
         <div class="hero-card" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3);">
-            <div class="hero-badge" style="background: rgba(239, 68, 68, 0.2); color: var(--danger);">⚠️ NO WORKING PROXIES FOUND</div>
+            <div class="hero-badge" style="background: rgba(239, 68, 68, 0.2); color: var(--danger);">${SVG_ICONS.alert} NO WORKING PROXIES FOUND</div>
             <div class="hero-main">
                 <p style="color: var(--text-secondary);">None of the tested proxies successfully connected to verification endpoints from your current network.</p>
             </div>
@@ -105,7 +148,7 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Best Proxy Benchmark Report — Multi-Factor Weighted Ranking</title>
+    <title>Best Proxy Benchmark Report - Multi-Factor Weighted Ranking</title>
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -141,6 +184,17 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         }
 
         .container { max-width: 1560px; margin: 0 auto; }
+
+        .icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            stroke-width: 2;
+            stroke: currentColor;
+            fill: none;
+            vertical-align: -0.125em;
+            flex-shrink: 0;
+        }
 
         header {
             display: flex;
@@ -187,7 +241,9 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         }
 
         .hero-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             background-color: rgba(56, 189, 248, 0.2);
             color: var(--accent);
             font-size: 0.75rem;
@@ -219,6 +275,13 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .hero-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .hero-stats {
@@ -270,10 +333,17 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         .weight-header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 0.78rem;
             font-weight: 600;
             color: var(--text-secondary);
             margin-bottom: 6px;
+        }
+
+        .weight-header span:first-child {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .weight-slider {
@@ -338,11 +408,24 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
             align-items: center;
         }
 
+        .search-box {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .search-box .search-icon {
+            position: absolute;
+            left: 10px;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
         .search-input {
             background-color: var(--bg-primary);
             border: 1px solid var(--border);
             color: var(--text-primary);
-            padding: 8px 14px;
+            padding: 8px 14px 8px 32px;
             border-radius: 6px;
             font-size: 0.875rem;
             width: 260px;
@@ -432,8 +515,8 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         }
 
         th:hover { color: var(--text-primary); background-color: var(--bg-hover); }
-        th.sort-asc::after { content: " ▲"; color: var(--accent); font-size: 0.7rem; }
-        th.sort-desc::after { content: " ▼"; color: var(--accent); font-size: 0.7rem; }
+        th.sort-asc::after { content: " \\25B2"; color: var(--accent); font-size: 0.7rem; }
+        th.sort-desc::after { content: " \\25BC"; color: var(--accent); font-size: 0.7rem; }
 
         td {
             padding: 12px 16px;
@@ -474,6 +557,9 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
             cursor: pointer;
             border-radius: 4px;
             transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .tab-btn.active {
             background-color: rgba(56, 189, 248, 0.15);
@@ -558,6 +644,9 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
             border-radius: 4px;
             font-size: 0.7rem;
             transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
         .copy-btn:hover { color: var(--text-primary); border-color: var(--accent); }
 
@@ -565,10 +654,13 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
             cursor: pointer;
             color: var(--accent);
             user-select: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             transition: transform 0.2s;
             margin-right: 6px;
-            font-size: 0.8rem;
+            width: 14px;
+            height: 14px;
         }
 
         .footer-note {
@@ -605,50 +697,50 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         <header>
             <div class="title-group">
                 <h1><span class="badge-pulse"></span> Proxy Benchmark & Best Network Finder</h1>
-                <p>Testing from your network (<span class="font-mono">${stats.localPublicIp || 'Direct'}</span>) • Multi-Factor Weighted Scoring Across All Columns & <strong>Top 50 Global Websites</strong></p>
+                <p>Testing from your network (<span class="font-mono">${stats.localPublicIp || 'Direct'}</span>) &bull; Multi-Factor Weighted Scoring Across All Columns & <strong>Top 50 Global Websites</strong></p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="btn" onclick="toggleWeightsPanel()">⚙️ Scoring Weights</button>
-                <button class="btn btn-highlight" onclick="copyTop10Urls()">📋 Copy Top 10 Proxies</button>
-                <button class="btn" onclick="copyPassedUrls()">📋 Copy All Alive</button>
-                <button class="btn btn-primary" onclick="exportFilteredCsv()">📥 Export CSV</button>
+                <button class="btn" onclick="toggleWeightsPanel()">${SVG_ICONS.settings} Scoring Weights</button>
+                <button class="btn btn-highlight" onclick="copyTop10Urls()">${SVG_ICONS.copy} Copy Top 10 Proxies</button>
+                <button class="btn" onclick="copyPassedUrls()">${SVG_ICONS.copy} Copy All Alive</button>
+                <button class="btn btn-primary" onclick="exportFilteredCsv()">${SVG_ICONS.download} Export CSV</button>
             </div>
         </header>
 
         <!-- Dynamic Scoring Weights Panel -->
         <div id="weights-panel" class="weights-panel">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent);">⚙️ Customize Multi-Factor Ranking Weights</h3>
+                <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 6px;">${SVG_ICONS.settings} Customize Multi-Factor Ranking Weights</h3>
                 <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="resetDefaultWeights()">Reset Defaults</button>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Adjust weights across all table columns. Scores and ranks recalculate in real-time.</p>
             <div class="weights-grid">
                 <div class="weight-item">
-                    <div class="weight-header"><span>🌐 Top 50 Sites</span><span id="w-val-websites">30%</span></div>
+                    <div class="weight-header"><span>${SVG_ICONS.globe} Top 50 Sites</span><span id="w-val-websites">30%</span></div>
                     <input type="range" class="weight-slider" id="w-websites" min="0" max="50" value="30" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>⚡ Avg Latency</span><span id="w-val-avgLatency">20%</span></div>
+                    <div class="weight-header"><span>${SVG_ICONS.bolt} Avg Latency</span><span id="w-val-avgLatency">20%</span></div>
                     <input type="range" class="weight-slider" id="w-avgLatency" min="0" max="50" value="20" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>🚀 Min Latency</span><span id="w-val-minLatency">10%</span></div>
+                    <div class="weight-header"><span>${SVG_ICONS.rocket} Min Latency</span><span id="w-val-minLatency">10%</span></div>
                     <input type="range" class="weight-slider" id="w-minLatency" min="0" max="30" value="10" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>🔌 Connect Time</span><span id="w-val-connectTime">10%</span></div>
+                    <div class="weight-header"><span>${SVG_ICONS.plug} Connect Time</span><span id="w-val-connectTime">10%</span></div>
                     <input type="range" class="weight-slider" id="w-connectTime" min="0" max="30" value="10" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>⏱️ TTFB Time</span><span id="w-val-ttfb">10%</span></div>
+                    <div class="weight-header"><span>${SVG_ICONS.clock} TTFB Time</span><span id="w-val-ttfb">10%</span></div>
                     <input type="range" class="weight-slider" id="w-ttfb" min="0" max="30" value="10" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>🚀 Speed / Bandwidth</span><span id="w-val-speed">10%</span></div>
+                    <div class="weight-header"><span>${SVG_ICONS.gauge} Speed / Bandwidth</span><span id="w-val-speed">10%</span></div>
                     <input type="range" class="weight-slider" id="w-speed" min="0" max="30" value="10" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>🛡️ Anonymity</span><span id="w-val-anonymity">10%</span></div>
+                    <div class="weight-header"><span>${SVG_ICONS.shield} Anonymity</span><span id="w-val-anonymity">10%</span></div>
                     <input type="range" class="weight-slider" id="w-anonymity" min="0" max="30" value="10" oninput="updateWeights()">
                 </div>
             </div>
@@ -709,7 +801,10 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         <!-- Controls / Search & Filters -->
         <div class="controls">
             <div class="filter-group">
-                <input type="text" id="search-input" class="search-input" placeholder="🔍 Search IP, port, country..." oninput="applyFilters()">
+                <div class="search-box">
+                    <span class="search-icon">${SVG_ICONS.search}</span>
+                    <input type="text" id="search-input" class="search-input" placeholder="Search IP, port, country..." oninput="applyFilters()">
+                </div>
                 
                 <select id="protocol-filter" class="filter-select" onchange="applyFilters()">
                     <option value="ALL">All Protocols</option>
@@ -761,7 +856,7 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         </div>
 
         <div class="footer-note">
-            Proxy Benchmark Suite • Multi-Factor Weighted Ranking • Full details saved to <span class="font-mono">benchmark-report.json</span>
+            Proxy Benchmark Suite &bull; Multi-Factor Weighted Ranking &bull; Full details saved to <span class="font-mono">benchmark-report.json</span>
         </div>
     </div>
 
@@ -773,6 +868,8 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         let currentSort = { column: 'score', asc: false };
         let expandedRows = new Set();
         let currentSubTabs = {};
+
+        const SVG_ICONS = ${JSON.stringify(SVG_ICONS)};
 
         // Active Scoring Weights (Sum = 100)
         let weights = {
@@ -826,13 +923,10 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
         }
 
         function computeWeightedScore(item) {
-            // Usability Ratio: A proxy that cannot load websites gets penalized proportionally
             const usabilityRatio = item.websitesTotal > 0 ? (item.websitesPassed / item.websitesTotal) : 1;
 
-            // 1. Direct Web Compatibility (50 pts max)
             const wScore = usabilityRatio * 50;
 
-            // 2. Performance Metrics (50 pts max, gated by Usability Ratio)
             const latScore = Math.max(0, Math.min(20, 20 * (1 - (item.avgLatencyMs / 2500))));
             const minLatScore = Math.max(0, Math.min(8, 8 * (1 - (item.minLatencyMs / 1500))));
             const connScore = Math.max(0, Math.min(8, 8 * (1 - (item.avgConnectTimeMs / 800))));
@@ -850,7 +944,7 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
                     websites: Math.round(wScore),
                     avgLatency: Math.round(latScore * usabilityRatio),
                     minLatency: Math.round(minLatScore * usabilityRatio),
-                    connectTime: Math.round(connectScore * usabilityRatio),
+                    connectTime: Math.round(connScore * usabilityRatio),
                     ttfb: Math.round(ttfbScore * usabilityRatio),
                     speed: Math.round(spdScore * usabilityRatio),
                     anonymity: item.anonymity === 'ELITE / ANONYMOUS' ? 10 : 0,
@@ -865,7 +959,6 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
                 item.scoreBreakdown = res.breakdown;
             });
 
-            // Re-sort and assign ranks
             benchmarks.sort((a, b) => {
                 if (b.compositeScore !== a.compositeScore) {
                     return b.compositeScore - a.compositeScore;
@@ -892,7 +985,7 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
             const heroCopyBtn = document.getElementById('hero-copy-btn');
 
             if (heroUrl) heroUrl.textContent = \`\${best.proxy.protocol.toUpperCase()}://\${best.proxy.ip}:\${best.proxy.port}\`;
-            if (heroMeta) heroMeta.innerHTML = \`<span>🌍 \${best.proxy.country || 'Global'}</span> • <span>🛡️ \${best.anonymity}</span> • <span>🌐 \${best.websitesPassed}/\${best.websitesTotal} Top Websites Reachable (\${best.websitePassRatePercent}%)</span>\`;
+            if (heroMeta) heroMeta.innerHTML = \`<span>\${SVG_ICONS.globe} \${best.proxy.country || 'Global'}</span> &bull; <span>\${SVG_ICONS.shield} \${best.anonymity}</span> &bull; <span>\${SVG_ICONS.globe} \${best.websitesPassed}/\${best.websitesTotal} Top Websites Reachable (\${best.websitePassRatePercent}%)</span>\`;
             if (heroScore) heroScore.innerHTML = \`\${best.compositeScore} <span style="font-size: 0.9rem; color: var(--text-muted);">/100</span>\`;
             if (heroLatency) heroLatency.textContent = \`\${best.avgLatencyMs} ms\`;
             if (heroConnect) heroConnect.textContent = \`\${best.avgConnectTimeMs} ms\`;
@@ -1140,7 +1233,7 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
                 html += \`
                 <tr class="\${isExpanded ? 'row-expanded' : ''}">
                     <td>
-                        <span class="expand-toggle" onclick="toggleRow('\${pKey}')">\${isExpanded ? '▼' : '▶'}</span>
+                        <span class="expand-toggle" onclick="toggleRow('\${pKey}')">\${isExpanded ? SVG_ICONS.chevronDown : SVG_ICONS.chevronRight}</span>
                     </td>
                     <td>
                         <span class="rank-pill">#\${item.rank}</span>
@@ -1164,7 +1257,7 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
                     <td class="font-mono">\${item.avgTtfbMs + ' ms'}</td>
                     <td class="font-mono">\${formatSpeed(item.avgSpeedBps)}</td>
                     <td>
-                        <button class="copy-btn" onclick="copyToClipboard('\${fullUrl}')" title="Copy URL">Copy</button>
+                        <button class="copy-btn" onclick="copyToClipboard('\${fullUrl}')" title="Copy URL">\${SVG_ICONS.copy} Copy</button>
                     </td>
                 </tr>
                 \`;
@@ -1175,8 +1268,8 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
                         <td colspan="15">
                             <div class="details-container">
                                 <div class="tab-nav">
-                                    <button class="tab-btn \${activeTab === 'websites' ? 'active' : ''}" onclick="switchSubTab('\${pKey}', 'websites')">🌐 Top 50 Websites (\${item.websitesPassed || 0}/\${item.websitesTotal || 50})</button>
-                                    <button class="tab-btn \${activeTab === 'endpoints' ? 'active' : ''}" onclick="switchSubTab('\${pKey}', 'endpoints')">🔍 Verification Endpoints (\${item.endpointsPassed || 0}/\${item.endpointsTotal || 11})</button>
+                                    <button class="tab-btn \${activeTab === 'websites' ? 'active' : ''}" onclick="switchSubTab('\${pKey}', 'websites')">\${SVG_ICONS.globe} Top 50 Websites (\${item.websitesPassed || 0}/\${item.websitesTotal || 50})</button>
+                                    <button class="tab-btn \${activeTab === 'endpoints' ? 'active' : ''}" onclick="switchSubTab('\${pKey}', 'endpoints')">\${SVG_ICONS.search} Verification Endpoints (\${item.endpointsPassed || 0}/\${item.endpointsTotal || 11})</button>
                                 </div>
 
                                 \${activeTab === 'websites' ? \`
@@ -1270,13 +1363,19 @@ export function generateHtmlReport(benchmarkData, stats, enabledEndpoints, outpu
 </html>`;
 }
 
-export function printSummary(stats, results, enabledEndpointCount, totalEndpointCount, reportPaths) {
+export function printSummary(
+    stats: BenchmarkStats,
+    results: Record<Protocol, ProxyItem[]>,
+    enabledEndpointCount: number,
+    totalEndpointCount: number,
+    reportPaths: { html?: string; json?: string }
+): void {
     log("========================================");
     log("                 Results");
     log("========================================");
     log("");
 
-    for (const protocol of ["http", "https", "socks4", "socks5"]) {
+    for (const protocol of ["http", "https", "socks4", "socks5"] as Protocol[]) {
         log(
             `  ${protocol.toUpperCase().padEnd(7)} ` +
             `${results[protocol].length.toLocaleString()} passed`
@@ -1285,7 +1384,7 @@ export function printSummary(stats, results, enabledEndpointCount, totalEndpoint
 
     log("");
     log(`  Local Network IP: ${stats.localPublicIp || 'Direct'}`);
-    log(`  Verification    : Hard-failed if 0/11 connected`);
+    log(`  Verification    : Hard-failed if 0/${enabledEndpointCount} connected`);
     log(`  Top Websites    : ${CONFIG.topWebsites?.length || 50} websites benchmarked`);
     log(`  Total tested    : ${stats.total.toLocaleString()}`);
     log(`  Passed / Alive  : ${stats.passed.toLocaleString()}`);

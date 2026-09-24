@@ -1,0 +1,72 @@
+name: Release Minified Bundle
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - "README.md"
+      - ".gitignore"
+      - "*.txt"
+      - "*.html"
+      - "*.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Nub
+        run: |
+          curl -fsSL https://nubjs.com/install.sh | bash
+          echo "$HOME/.nub/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies with Nub
+        run: nub install
+
+      - name: Typecheck TypeScript
+        run: nub run typecheck
+
+      - name: Build and Minify Bundle with Nub
+        run: nub run build
+
+      - name: Generate Version Tag
+        id: tag
+        run: |
+          VERSION="v1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.version }}
+          name: "Release ${{ steps.tag.outputs.version }}"
+          body: |
+            ## Automated Release - Proxy Benchmarker
+
+            ### Assets
+            - `proxy-benchmarker.min.mjs`: Standalone, zero-dependency minified proxy benchmark and network finder.
+
+            ### Quick Run
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxies/main/run.sh | bash
+            ```
+          files: |
+            dist/proxy-benchmarker.min.mjs
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

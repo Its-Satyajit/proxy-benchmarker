@@ -4,3 +4,5 @@ https.txt
 http.txt
 benchmark-report.json
 benchmark-report.html
+node_modules/
+.proxy-benchmarker.*

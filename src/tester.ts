@@ -1,9 +1,23 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { isIP } from "node:net";
-import { parseUrl } from "./dns.mjs";
-import { buildCurlProxyArgs } from "./proxy.mjs";
-import { live, ansi, formatPercent, formatRate, formatDuration } from "./terminal.mjs";
+import process from "node:process";
+import type {
+    AppConfig,
+    ProxyItem,
+    TestEndpoint,
+    WebsiteTarget,
+    EndpointProbeResult,
+    WebsiteProbeResult,
+    BenchmarkItem,
+    BenchmarkRunResult,
+    LatencyTier,
+    AnonymityStatus,
+    Protocol
+} from "./types.js";
+import { parseUrl } from "./dns.js";
+import { buildCurlProxyArgs } from "./proxy.js";
+import { live, ansi, formatPercent, formatRate, formatDuration } from "./terminal.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -11,7 +25,7 @@ const execFileAsync = promisify(execFile);
  * Response Parsing
  * ============================================================ */
 
-export function extractPlainIp(body) {
+export function extractPlainIp(body: string): string | null {
     const lines = body
         .trim()
         .split(/\r?\n/)
@@ -26,12 +40,12 @@ export function extractPlainIp(body) {
     return null;
 }
 
-export function extractIpFromIpMe(body) {
+export function extractIpFromIpMe(body: string): string | null {
     const normal = body.match(
         /<input\b[^>]*\bname=["']ip["'][^>]*\bvalue=["']((?:\d{1,3}\.){3}\d{1,3})["']/i
     );
 
-    if (normal && isIP(normal[1]) === 4) {
+    if (normal && normal[1] && isIP(normal[1]) === 4) {
         return normal[1];
     }
 
@@ -39,14 +53,14 @@ export function extractIpFromIpMe(body) {
         /<input\b[^>]*\bvalue=["']((?:\d{1,3}\.){3}\d{1,3})["'][^>]*\bname=["']ip["']/i
     );
 
-    if (reverse && isIP(reverse[1]) === 4) {
+    if (reverse && reverse[1] && isIP(reverse[1]) === 4) {
         return reverse[1];
     }
 
     return null;
 }
 
-export function extractIp(body, parser) {
+export function extractIp(body: string, parser: "plain" | "ipme"): string | null {
     if (parser === "ipme") {
         return extractIpFromIpMe(body);
     }
@@ -57,11 +71,15 @@ export function extractIp(body, parser) {
  * Fast Verification Endpoint Probe
  * ============================================================ */
 
-export async function testProxyEndpoint(proxy, endpoint, config) {
+export async function testProxyEndpoint(
+    proxy: ProxyItem,
+    endpoint: TestEndpoint,
+    config: AppConfig
+): Promise<EndpointProbeResult> {
     const target = parseUrl(endpoint.url);
     const writeOutFormat = "\n__BENCHMARK__:%{http_code}:%{time_connect}:%{time_appconnect}:%{time_starttransfer}:%{time_total}:%{speed_download}:%{size_download}";
 
-    const args = [
+    const args: string[] = [
         "--ipv4",
         "--insecure",
         "--silent",
@@ -70,12 +88,16 @@ export async function testProxyEndpoint(proxy, endpoint, config) {
         "--noproxy", "",
         "--connect-timeout", String(config.connectTimeoutSeconds || 3),
         "--max-time", String(config.timeoutSeconds || 4),
-        "--resolve", `${target.hostname}:${target.port}:${endpoint.resolvedIp}`,
         "-A", "Mozilla/5.0 ProxyScrapeTester",
         "-w", writeOutFormat,
         ...buildCurlProxyArgs(proxy),
-        endpoint.url,
     ];
+
+    if (endpoint.resolvedIp) {
+        args.push("--resolve", `${target.hostname}:${target.port}:${endpoint.resolvedIp}`);
+    }
+
+    args.push(endpoint.url);
 
     const timeoutMs = ((config.timeoutSeconds || 4) * 1000) + 1500;
 
@@ -91,7 +113,7 @@ export async function testProxyEndpoint(proxy, endpoint, config) {
         });
         stdout = res.stdout || "";
         stderr = res.stderr || "";
-    } catch (error) {
+    } catch (error: any) {
         stdout = error.stdout || "";
         stderr = error.stderr || "";
         exitCode = error.code ?? 1;
@@ -115,13 +137,13 @@ export async function testProxyEndpoint(proxy, endpoint, config) {
         const parts = benchmarkPart.split(":");
 
         if (parts.length >= 7) {
-            httpCode = parseInt(parts[0], 10) || 0;
-            connectTimeMs = Math.round(parseFloat(parts[1]) * 1000);
-            sslHandshakeMs = Math.round(parseFloat(parts[2]) * 1000);
-            ttfbMs = Math.round(parseFloat(parts[3]) * 1000);
-            totalLatencyMs = Math.round(parseFloat(parts[4]) * 1000);
-            downloadSpeedBps = parseFloat(parts[5]) || 0;
-            downloadSizeBytes = parseInt(parts[6], 10) || 0;
+            httpCode = Number.parseInt(parts[0] || "0", 10) || 0;
+            connectTimeMs = Math.round(Number.parseFloat(parts[1] || "0") * 1000);
+            sslHandshakeMs = Math.round(Number.parseFloat(parts[2] || "0") * 1000);
+            ttfbMs = Math.round(Number.parseFloat(parts[3] || "0") * 1000);
+            totalLatencyMs = Math.round(Number.parseFloat(parts[4] || "0") * 1000);
+            downloadSpeedBps = Number.parseFloat(parts[5] || "0") || 0;
+            downloadSizeBytes = Number.parseInt(parts[6] || "0", 10) || 0;
         }
     }
 
@@ -184,10 +206,14 @@ export async function testProxyEndpoint(proxy, endpoint, config) {
  * Fast Website Connectivity & Benchmark Probe
  * ============================================================ */
 
-export async function testProxyWebsite(proxy, website, config) {
+export async function testProxyWebsite(
+    proxy: ProxyItem,
+    website: WebsiteTarget,
+    config: AppConfig
+): Promise<WebsiteProbeResult> {
     const writeOutFormat = "\n__BENCHMARK__:%{http_code}:%{time_connect}:%{time_appconnect}:%{time_starttransfer}:%{time_total}:%{speed_download}:%{size_download}";
 
-    const args = [
+    const args: string[] = [
         "--ipv4",
         "--insecure",
         "--silent",
@@ -216,7 +242,7 @@ export async function testProxyWebsite(proxy, website, config) {
         });
         stdout = res.stdout || "";
         stderr = res.stderr || "";
-    } catch (error) {
+    } catch (error: any) {
         stdout = error.stdout || "";
         stderr = error.stderr || "";
         exitCode = error.code ?? 1;
@@ -238,13 +264,13 @@ export async function testProxyWebsite(proxy, website, config) {
         const parts = benchmarkPart.split(":");
 
         if (parts.length >= 7) {
-            httpCode = parseInt(parts[0], 10) || 0;
-            connectTimeMs = Math.round(parseFloat(parts[1]) * 1000);
-            sslHandshakeMs = Math.round(parseFloat(parts[2]) * 1000);
-            ttfbMs = Math.round(parseFloat(parts[3]) * 1000);
-            totalLatencyMs = Math.round(parseFloat(parts[4]) * 1000);
-            downloadSpeedBps = parseFloat(parts[5]) || 0;
-            downloadSizeBytes = parseInt(parts[6], 10) || 0;
+            httpCode = Number.parseInt(parts[0] || "0", 10) || 0;
+            connectTimeMs = Math.round(Number.parseFloat(parts[1] || "0") * 1000);
+            sslHandshakeMs = Math.round(Number.parseFloat(parts[2] || "0") * 1000);
+            ttfbMs = Math.round(Number.parseFloat(parts[3] || "0") * 1000);
+            totalLatencyMs = Math.round(Number.parseFloat(parts[4] || "0") * 1000);
+            downloadSpeedBps = Number.parseFloat(parts[5] || "0") || 0;
+            downloadSizeBytes = Number.parseInt(parts[6] || "0", 10) || 0;
         }
     }
 
@@ -267,8 +293,12 @@ export async function testProxyWebsite(proxy, website, config) {
     };
 }
 
-export async function benchmarkTopWebsitesForProxy(proxy, websites, config) {
-    const results = [];
+export async function benchmarkTopWebsitesForProxy(
+    proxy: ProxyItem,
+    websites: WebsiteTarget[],
+    config: AppConfig
+): Promise<WebsiteProbeResult[]> {
+    const results: WebsiteProbeResult[] = [];
     const concurrency = config.websiteConcurrency || 25;
 
     for (let i = 0; i < websites.length; i += concurrency) {
@@ -282,22 +312,28 @@ export async function benchmarkTopWebsitesForProxy(proxy, websites, config) {
     return results;
 }
 
-function calculateMedian(numbers) {
+function calculateMedian(numbers: number[]): number {
     if (numbers.length === 0) return 0;
     const sorted = [...numbers].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
+    const midVal = sorted[mid] ?? 0;
+    const prevVal = sorted[mid - 1] ?? 0;
     return sorted.length % 2 !== 0
-        ? sorted[mid]
-        : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+        ? midVal
+        : Math.round((prevVal + midVal) / 2);
 }
 
 /* ============================================================
  * Fast Health Verification Check (Phase 1)
  * ============================================================ */
 
-export async function verifyProxyHealth(proxy, endpoints, config) {
-    const endpointResults = [];
-    let exitIp = null;
+export async function verifyProxyHealth(
+    proxy: ProxyItem,
+    endpoints: TestEndpoint[],
+    config: AppConfig
+): Promise<{ isAlive: boolean; exitIp: string | null; endpointResults: EndpointProbeResult[] }> {
+    const endpointResults: EndpointProbeResult[] = [];
+    let exitIp: string | null = null;
 
     // Test endpoints until at least one succeeds
     for (const endpoint of endpoints) {
@@ -325,15 +361,26 @@ export async function verifyProxyHealth(proxy, endpoints, config) {
  * Full High-Speed Two-Phase Funnel Benchmark Runner
  * ============================================================ */
 
-export async function runProxyTests(proxies, endpoints, config, localPublicIp = null) {
-    const results = {
+interface CandidateData {
+    proxy: ProxyItem;
+    exitIp: string | null;
+    endpointResults: EndpointProbeResult[];
+}
+
+export async function runProxyTests(
+    proxies: ProxyItem[],
+    endpoints: TestEndpoint[],
+    config: AppConfig,
+    localPublicIp: string | null = null
+): Promise<BenchmarkRunResult> {
+    const results: Record<Protocol, ProxyItem[]> = {
         http: [],
         https: [],
         socks4: [],
         socks5: [],
     };
 
-    const aliveCandidates = [];
+    const aliveCandidates: CandidateData[] = [];
     let completedPhase1 = 0;
     let passedPhase1 = 0;
     let failedPhase1 = 0;
@@ -345,7 +392,7 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
     /* ----------------------------------------------------------
      * PHASE 1: High-Speed Parallel Health Filter (100+ Workers)
      * ---------------------------------------------------------- */
-    process.stdout.write(`\n${ansi.bold}${ansi.cyan}▶ Phase 1: High-Speed Verification & Pruning (${concurrency} parallel workers)${ansi.reset}\n`);
+    process.stdout.write(`\n${ansi.bold}${ansi.cyan}>> Phase 1: High-Speed Verification & Pruning (${concurrency} parallel workers)${ansi.reset}\n`);
 
     function renderProgressPhase1() {
         const elapsed = (Date.now() - startedAt) / 1000;
@@ -357,8 +404,8 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
             `${ansi.cyan}Phase 1${ansi.reset} ` +
             `${formatPercent(completedPhase1, proxies.length)}% | ` +
             `${completedPhase1.toLocaleString()}/${proxies.length.toLocaleString()} | ` +
-            `${ansi.green}✓ ${passedPhase1} Alive${ansi.reset} | ` +
-            `${ansi.red}✗ ${failedPhase1} Dropped${ansi.reset} | ` +
+            `${ansi.green}[OK] ${passedPhase1} Alive${ansi.reset} | ` +
+            `${ansi.red}[FAIL] ${failedPhase1} Dropped${ansi.reset} | ` +
             `${formatRate(rate)} | ` +
             `ETA ${formatDuration(eta)}`
         );
@@ -371,6 +418,8 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
             nextIndex1++;
 
             const proxy = proxies[index];
+            if (!proxy) continue;
+
             try {
                 const health = await verifyProxyHealth(proxy, endpoints, config);
                 completedPhase1++;
@@ -400,17 +449,17 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
 
     const phase1Duration = ((Date.now() - startedAt) / 1000).toFixed(1);
     process.stdout.write(
-        `  ${ansi.green}✓ Phase 1 Finished in ${phase1Duration}s${ansi.reset} — ` +
+        `  ${ansi.green}[OK] Phase 1 Finished in ${phase1Duration}s${ansi.reset} - ` +
         `Identified ${ansi.bold}${passedPhase1}${ansi.reset} alive proxies (${failedPhase1} dropped)\n\n`
     );
 
     /* ----------------------------------------------------------
      * PHASE 2: Deep Top 50 Websites Benchmark on Alive Proxies
      * ---------------------------------------------------------- */
-    const benchmarkReports = [];
+    const benchmarkReports: BenchmarkItem[] = [];
 
     if (aliveCandidates.length > 0) {
-        process.stdout.write(`${ansi.bold}${ansi.cyan}▶ Phase 2: Top 50 Global Websites Benchmark (${aliveCandidates.length} alive proxies)${ansi.reset}\n`);
+        process.stdout.write(`${ansi.bold}${ansi.cyan}>> Phase 2: Top 50 Global Websites Benchmark (${aliveCandidates.length} alive proxies)${ansi.reset}\n`);
 
         const phase2StartedAt = Date.now();
         let completedPhase2 = 0;
@@ -440,10 +489,12 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
                 nextIndex2++;
 
                 const candidate = aliveCandidates[index];
+                if (!candidate) continue;
+
                 const { proxy, exitIp, endpointResults } = candidate;
 
-                let websiteResults = [];
-                if (config.benchmarkTopWebsites && config.topWebsites?.length > 0) {
+                let websiteResults: WebsiteProbeResult[] = [];
+                if (config.benchmarkTopWebsites && config.topWebsites.length > 0) {
                     try {
                         websiteResults = await benchmarkTopWebsitesForProxy(proxy, config.topWebsites, config);
                     } catch {
@@ -480,7 +531,7 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
                     ? Math.round(speeds.reduce((sum, val) => sum + val, 0) / speeds.length)
                     : 0;
 
-                let anonymity = "UNKNOWN";
+                let anonymity: AnonymityStatus = "UNKNOWN";
                 if (exitIp) {
                     if (localPublicIp && exitIp === localPublicIp) {
                         anonymity = "TRANSPARENT (LEAKING)";
@@ -489,18 +540,17 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
                     }
                 }
 
-                let tier = "SLOW";
+                let tier: LatencyTier = "SLOW";
                 if (avgLatencyMs < 400) tier = "EXCELLENT";
                 else if (avgLatencyMs < 800) tier = "GOOD";
                 else if (avgLatencyMs < 1500) tier = "MODERATE";
 
-                const totalWebsites = config.topWebsites?.length || 0;
+                const totalWebsites = config.topWebsites.length;
                 const websitePassRatePercent = totalWebsites > 0
-                    ? parseFloat(((successfulWebsites.length / totalWebsites) * 100).toFixed(1))
+                    ? Number.parseFloat(((successfulWebsites.length / totalWebsites) * 100).toFixed(1))
                     : 0;
 
                 // Usability-Gated Multi-Factor Scoring (0 - 100 pts)
-                // Usability Ratio: A proxy that cannot load websites gets penalized proportionally
                 const usabilityRatio = totalWebsites > 0 ? (successfulWebsites.length / totalWebsites) : 1;
 
                 // 1. Direct Web Compatibility (50 pts max)
@@ -528,7 +578,7 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
                     anonymity: anonymity === "ELITE / ANONYMOUS" ? 10 : 0,
                 };
 
-                const benchmarkData = {
+                const benchmarkData: BenchmarkItem = {
                     proxy,
                     status: "PASS",
                     tier,
@@ -539,7 +589,7 @@ export async function runProxyTests(proxies, endpoints, config, localPublicIp = 
                     endpointsTested: endpointResults.length,
                     endpointsPassed: successfulEp.length,
                     endpointsTotal: endpoints.length,
-                    passRatePercent: parseFloat(((successfulEp.length / endpoints.length) * 100).toFixed(1)),
+                    passRatePercent: Number.parseFloat(((successfulEp.length / endpoints.length) * 100).toFixed(1)),
                     websitesTested: websiteResults.length,
                     websitesPassed: successfulWebsites.length,
                     websitesTotal: totalWebsites,
