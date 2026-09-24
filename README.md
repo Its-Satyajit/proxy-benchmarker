@@ -2,6 +2,8 @@
 
 Finds working public proxies for your local network by testing connection latency, anonymity, and reachability against 50 top websites. Outputs sorted proxy lists (`http.txt`, `socks5.txt`) and a self-contained HTML report with live ranking controls.
 
+![Interactive benchmark report](images/Screenshot_20260925_003102.png)
+
 ---
 
 ## Quick run
@@ -30,9 +32,13 @@ nub launcher.ts
 
 Testing 26,000+ public proxies with curl alone takes over 45 minutes because most are offline. This tool runs a 3-stage funnel to finish in under 90 seconds:
 
+![CLI terminal execution](images/Screenshot_20260925_002844.png)
+
 1. **TCP port probe (600 parallel sockets).** Connects directly to proxy IPs with raw Node sockets (1.2s timeout). Drops dead IPs in roughly 15 seconds without spawning curl processes.
 2. **Health and anonymity verification.** Probes surviving endpoints with parallel curl workers to detect exit IPs, TLS handshake time, and anonymity tier.
 3. **Website benchmark.** Tests reachability, HTTP status codes, and TTFB across 50 top global websites (Google, Cloudflare, GitHub, OpenAI, etc.).
+
+![Website latency and reachability breakdown](images/Screenshot_20260925_003321.png)
 
 ---
 
