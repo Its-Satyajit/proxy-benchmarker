@@ -12,7 +12,6 @@ REPORT_FILE="$(pwd)/benchmark-report.html"
 # Check dependencies
 command -v node >/dev/null 2>&1 || { echo "[ERROR] Node.js is required but not installed."; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "[ERROR] curl is required but not installed."; exit 1; }
-command -v dig >/dev/null 2>&1 || { echo "[ERROR] dig is required but not installed (install bind-utils or dnsutils)."; exit 1; }
 
 echo ""
 echo "========================================"

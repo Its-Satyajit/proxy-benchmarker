@@ -6,13 +6,19 @@ Finds working public proxies for your local network by testing connection latenc
 
 ## Quick run
 
-Run the latest release and open the report:
+### Linux & macOS
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.sh | bash
 ```
 
-Or run via nub:
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.ps1 | iex
+```
+
+### Cross-platform (nub / node)
 
 ```bash
 nub launcher.ts
