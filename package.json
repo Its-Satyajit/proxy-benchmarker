@@ -1,0 +1,14 @@
+{
+  "name": "proxy-benchmarker",
+  "version": "1.0.0",
+  "description": "High-performance modular proxy tester and benchmark report generator",
+  "type": "module",
+  "main": "update-proxies.mjs",
+  "scripts": {
+    "start": "node update-proxies.mjs",
+    "benchmark": "node update-proxies.mjs"
+  },
+  "keywords": ["proxy", "tester", "benchmark", "socks5", "socks4", "http", "https"],
+  "author": "",
+  "license": "MIT"
+}
