@@ -107,7 +107,7 @@ function openBrowser(filePath: string): void {
 
 async function main(): Promise<void> {
     log("\n========================================");
-    log("   Proxy Benchmark Launcher & Browser   ");
+    log("  Proxy Benchmark & Network Telemetry   ");
     log("========================================");
     log("");
 

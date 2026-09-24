@@ -15,7 +15,7 @@ command -v curl >/dev/null 2>&1 || { echo "[ERROR] curl is required but not inst
 
 echo ""
 echo "========================================"
-echo "   Proxy Benchmark Launcher & Auto-Run  "
+echo " Proxy Benchmark & Network Telemetry    "
 echo "========================================"
 echo ""
 

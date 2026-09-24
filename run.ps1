@@ -17,7 +17,7 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "   Proxy Benchmark Windows Launcher     " -ForegroundColor Cyan
+Write-Host "  Proxy Benchmark & Network Telemetry   " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

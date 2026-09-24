@@ -1,6 +1,8 @@
 # Proxy benchmarker
 
-Finds working public proxies for your local network by testing connection latency, anonymity, and reachability against 50 top websites. Outputs sorted proxy lists (`http.txt`, `socks5.txt`) and a self-contained HTML report with live ranking controls.
+Asynchronous network telemetry and proxy benchmarking suite. Measures TCP handshake latency, TLS negotiation, Time to First Byte (TTFB), transfer throughput, and reachability across 50 global edge endpoints.
+
+A 3-stage non-blocking pipeline evaluates 26,000+ candidate routes in under 90 seconds, outputting normalized proxy configurations (`http.txt`, `socks5.txt`), machine-readable JSON telemetry (`benchmark-report.json`), and an interactive client-side report.
 
 ![Interactive benchmark report](images/Screenshot_20260925_003102.png)
 
@@ -28,37 +30,37 @@ nub launcher.ts
 
 ---
 
-## How it works
+## Pipeline architecture
 
-Testing 26,000+ public proxies with curl alone takes over 45 minutes because most are offline. This tool runs a 3-stage funnel to finish in under 90 seconds:
+Probing tens of thousands of network endpoints with individual subprocesses creates massive CPU and process spawn bottlenecks when 85%+ of candidates are unreachable. This suite uses a tiered funnel to maximize throughput:
 
 ![CLI terminal execution](images/Screenshot_20260925_002844.png)
 
-1. **TCP port probe (600 parallel sockets).** Connects directly to proxy IPs with raw Node sockets (1.2s timeout). Drops dead IPs in roughly 15 seconds without spawning curl processes.
-2. **Health and anonymity verification.** Probes surviving endpoints with parallel curl workers to detect exit IPs, TLS handshake time, and anonymity tier.
-3. **Website benchmark.** Tests reachability, HTTP status codes, and TTFB across 50 top global websites (Google, Cloudflare, GitHub, OpenAI, etc.).
+1. **Asynchronous TCP socket pre-filter (600 parallel sockets).** Connects directly to candidate IP:port pairs using non-blocking Node.js sockets (1.2s timeout). Eliminates closed ports and unroutable hosts in ~15 seconds without spawning curl processes.
+2. **Protocol handshake and egress verification (150 parallel workers).** Probes surviving endpoints to measure TCP connect duration, TLS negotiation time, TTFB, and exit IP leak detection against the local network origin.
+3. **Global edge transit benchmark.** Evaluates real-world HTTP/HTTPS reachability, status code return distributions, and latency across 50 major web properties and content delivery networks.
 
 ![Website latency and reachability breakdown](images/Screenshot_20260925_003321.png)
 
 ---
 
-## Ranking formula
+## Scoring model
 
-Scores run from 0 to 100 points. Reachability gates total score:
+Composite route quality scores range from 0 to 100 points, gated by edge reachability:
 
 $$\text{Usability ratio} = \frac{\text{Websites passed}}{50}$$
 
 $$\text{Final score} = (\text{Usability ratio} \times 50\text{ pts}) + (\text{Performance score} \times \text{Usability ratio})$$
 
-| Metric | Max points | Details |
+| Telemetry dimension | Max weight | Metric details |
 | :--- | :---: | :--- |
-| **50 Top sites** | 50 pts | Percentage of reachable global websites. |
-| **Average latency** | 20 pts | Scaled from 0 to 2,500 ms across successful endpoints. |
-| **Minimum latency** | 8 pts | Peak response time on fastest endpoint. |
-| **Connect time** | 8 pts | TCP handshake duration. |
-| **TTFB** | 7 pts | Time to first byte. |
-| **Bandwidth** | 7 pts | Download rate scaled up to 500 KB/s. |
-| **Anonymity** | 10 pts | 10 pts for masking local public IP, 0 for leaking. |
+| **Edge reachability** | 50 pts | Proportion of 50 global destinations successfully reached. |
+| **Average latency** | 20 pts | Round-trip response time (scaled 0 to 2,500 ms). |
+| **Minimum latency** | 8 pts | Peak single-request responsiveness. |
+| **TCP connect time** | 8 pts | Transport-layer handshake duration. |
+| **TTFB** | 7 pts | Time to first byte from target server. |
+| **Throughput bandwidth** | 7 pts | Transfer rate (scaled to 500 KB/s). |
+| **Egress anonymity** | 10 pts | 10 pts for full masking of origin public IP; 0 for direct leak. |
 
 ---
 
@@ -113,6 +115,32 @@ LIMIT=50 nub update-proxies.ts
 
 # Fast scan on unstable network
 TIMEOUT=5 CONNECT_TIMEOUT=3 nub update-proxies.ts
+```
+
+---
+
+## Telemetry and metrics
+
+Every run writes granular JSON telemetry to `benchmark-report.json`:
+
+```json
+{
+  "proxy": { "protocol": "socks5", "ip": "185.87.255.54", "port": 1080, "country": "DE" },
+  "status": "PASS",
+  "compositeScore": 84,
+  "anonymity": "ELITE / ANONYMOUS",
+  "exitIp": "185.87.255.54",
+  "avgLatencyMs": 420,
+  "minLatencyMs": 185,
+  "avgConnectTimeMs": 95,
+  "avgTtfbMs": 280,
+  "avgSpeedBps": 184500,
+  "websitesPassed": 48,
+  "websitesTotal": 50,
+  "websiteDetails": [
+    { "name": "Google", "domain": "google.com", "ok": true, "httpCode": 204, "totalLatencyMs": 312 }
+  ]
+}
 ```
 
 ---
