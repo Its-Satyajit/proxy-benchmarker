@@ -1,0 +1,91 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":automergeMinor",
+    ":automergePatch",
+    ":automergeDigest"
+  ],
+  "platformAutomerge": true,
+  "automergeType": "pr",
+  "ignoreTests": false,
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Automerge non-major npm updates when CI passes",
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Automerge GitHub Actions updates when CI passes",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Group development dependency updates",
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "groupName": "devDependencies (non-major)",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "description": "Group GitHub Actions workflow updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ]
+    },
+    {
+      "description": "Keep major updates manual for review",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "major-update"
+      ]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security",
+      "dependencies"
+    ],
+    "automerge": false
+  }
+}
