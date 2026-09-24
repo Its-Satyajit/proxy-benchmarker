@@ -139,7 +139,7 @@ export async function testProxyEndpoint(
         "--noproxy", "",
         "--connect-timeout", String(config.connectTimeoutSeconds || 2.5),
         "--max-time", String(config.timeoutSeconds || 3.5),
-        "-A", "Mozilla/5.0 ProxyScrapeTester",
+        "-A", "Mozilla/5.0 ProxyBenchmarker",
         "-w", writeOutFormat,
         ...buildCurlProxyArgs(proxy),
     ];

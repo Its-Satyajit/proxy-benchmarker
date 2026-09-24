@@ -88,7 +88,7 @@ export function parseCsv(text: string): ProxyItem[] {
 }
 
 export async function downloadCsv(urls: string[], config: AppConfig): Promise<string> {
-    log("Downloading latest ProxyScrape list...");
+    log("Downloading latest proxy list from proxifly/free-proxy-list...");
 
     for (const sourceUrl of urls) {
         const source = new URL(sourceUrl);
@@ -113,7 +113,7 @@ export async function downloadCsv(urls: string[], config: AppConfig): Promise<st
             "--connect-timeout", "10",
             "--max-time", "30",
             "--resolve", `${source.hostname}:443:${resolvedIp}`,
-            "-A", "Mozilla/5.0 ProxyScrapeTester",
+            "-A", "Mozilla/5.0 ProxyBenchmarker",
             sourceUrl,
         ];
 
@@ -136,5 +136,5 @@ export async function downloadCsv(urls: string[], config: AppConfig): Promise<st
         }
     }
 
-    throw new Error("Unable to download ProxyScrape CSV from any source.");
+    throw new Error("Unable to download proxy list CSV from any source.");
 }

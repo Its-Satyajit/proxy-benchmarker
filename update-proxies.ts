@@ -57,12 +57,12 @@ async function main(): Promise<void> {
     const csv = await downloadCsv(CONFIG.csvUrls, CONFIG);
 
     // 4. Parse and Normalize
-    log(`\n${ansi.cyan}Parsing ProxyScrape CSV...${ansi.reset}`);
+    log(`\n${ansi.cyan}Parsing proxy list CSV...${ansi.reset}`);
     const rows = parseCsv(csv);
     let proxies = deduplicateProxies(rows);
 
     if (proxies.length === 0) {
-        throw new Error("ProxyScrape CSV contained no valid proxies.");
+        throw new Error("Proxy list CSV contained no valid proxies.");
     }
 
     if (CONFIG.limit > 0 && CONFIG.limit < proxies.length) {
