@@ -23,9 +23,10 @@ nub launcher.ts
 ## Key Features
 
 * **TypeScript v7 Architecture**: Strict type definitions, clean interfaces, and modern ESM standard.
-* **High-Speed Two-Phase Funnel Pipeline**: Tests thousands of proxies in **under 1–2 minutes** using 100+ parallel async workers.
-* **Hard-Fail Pruning**: Filters out completely dead proxies across 11 verification endpoints before running website benchmarks.
-* **Top 50 Global Websites Benchmark**: Probes real-world connectivity, status codes, TTFB, and latency across top domains:
+* **Three-Stage Turbo Funnel Pipeline**: Tests 26,000+ proxies in **under 1–2 minutes** by first running an ultra-fast non-blocking async TCP socket pre-filter (600 parallel sockets), cutting dead proxies in seconds before invoking curl workers.
+* **Stage 1: Async TCP Socket Pre-Filter**: Slices through 26k+ IPs in ~15-20s using direct Node.js non-blocking sockets with zero subprocess overhead.
+* **Stage 2: Health & Exit IP Verification**: Deep probes surviving live endpoints with parallel curl workers to determine anonymity, latency, and TTFB.
+* **Stage 3: Top 50 Global Websites Benchmark**: Probes real-world connectivity, status codes, TTFB, and latency across top domains:
   * **Search & Infra**: Google, Cloudflare, 1.1.1.1, Microsoft, Apple, Bing, DuckDuckGo, Yahoo
   * **Developers**: GitHub, GitLab, StackOverflow, NPM, Docker Hub, Mozilla, Bitbucket, CDNJS
   * **AI & Next-Gen**: OpenAI, Hugging Face
@@ -100,8 +101,10 @@ Customize benchmark execution with environment variables:
 
 | Variable | Default | Description |
 | :--- | :---: | :--- |
-| `CONCURRENCY` | `100` | Number of parallel worker threads. |
-| `CONNECT_TIMEOUT` | `3` | Connection timeout in seconds. |
+| `TCP_CONCURRENCY` | `600` | Number of concurrent non-blocking TCP socket probes in Stage 1. |
+| `TCP_TIMEOUT` | `1200` | Stage 1 TCP socket connection timeout in milliseconds. |
+| `CONCURRENCY` | `150` | Number of parallel worker threads in Stage 2 and Stage 3. |
+| `CONNECT_TIMEOUT` | `3` | Connection timeout in seconds for curl workers. |
 | `TIMEOUT` | `4` | Maximum total timeout per request in seconds. |
 | `WEBSITE_TIMEOUT` | `3.5` | Website probe timeout in seconds. |
 | `DNS` | `1.1.1.1` | DNS server used for pre-resolving verification endpoints. |
