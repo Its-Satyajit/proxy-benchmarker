@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -55,15 +57,13 @@ jobs:
           tag_name: ${{ steps.tag.outputs.version }}
           name: "Release ${{ steps.tag.outputs.version }}"
           body: |
-            ## Automated Release - Proxy Benchmarker
-
-            ### Assets
-            - `proxy-benchmarker.min.mjs`: Standalone, zero-dependency minified proxy benchmark and network finder.
+            ## Proxy Benchmarker ${{ steps.tag.outputs.version }}
 
             ### Quick Run
             ```bash
             curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.sh | bash
             ```
+          generate_release_notes: true
           files: |
             dist/proxy-benchmarker.min.mjs
           draft: false
