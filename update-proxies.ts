@@ -30,10 +30,10 @@ async function main(): Promise<void> {
 
     // 1. Dependency Checks & Network Context
     await checkDependencies();
-    log(`${ansi.green}[OK]${ansi.reset} curl and dig are available`);
+    log(`${ansi.green}[OK]${ansi.reset} Network tools ready`);
 
     const localPublicIp = await getLocalPublicIp();
-    log(`${ansi.cyan}[INFO]${ansi.reset} Local Network Public IP: ${ansi.bold}${localPublicIp || "Direct / Unknown"}${ansi.reset}`);
+    log(`${ansi.cyan}[INFO]${ansi.reset} Origin Public IP: ${ansi.bold}${localPublicIp || "Direct / Unknown"}${ansi.reset}`);
 
     log(
         `${ansi.gray}` +
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
         `Workers: ${CONFIG.concurrency} | ` +
         `Timeout: ${CONFIG.timeoutSeconds}s | ` +
         `DNS: ${CONFIG.cloudflareDns} | ` +
-        `Top Websites: ${CONFIG.benchmarkTopWebsites ? `${CONFIG.topWebsites?.length || 50} sites` : "Disabled"}` +
+        `Edge Targets: ${CONFIG.benchmarkTopWebsites ? `${CONFIG.topWebsites?.length || 50} sites` : "Disabled"}` +
         `${ansi.reset}\n`
     );
 
@@ -50,23 +50,23 @@ async function main(): Promise<void> {
 
     // 3. Download Proxy List
     log("========================================");
-    log("        Downloading Proxy List          ");
+    log("     Fetching Candidate Route Feeds     ");
     log("========================================");
     log("");
 
     const csv = await downloadCsv(CONFIG.csvUrls, CONFIG);
 
     // 4. Parse and Normalize
-    log(`\n${ansi.cyan}Parsing proxy list CSV...${ansi.reset}`);
+    log(`\n${ansi.cyan}Parsing candidate endpoints...${ansi.reset}`);
     const rows = parseCsv(csv);
     let proxies = deduplicateProxies(rows);
 
     if (proxies.length === 0) {
-        throw new Error("Proxy list CSV contained no valid proxies.");
+        throw new Error("Candidate feed contained no valid endpoints.");
     }
 
     if (CONFIG.limit > 0 && CONFIG.limit < proxies.length) {
-        log(`  Limiting test to first ${CONFIG.limit} proxies (LIMIT=${CONFIG.limit})`);
+        log(`  Limiting benchmark to first ${CONFIG.limit} candidates (LIMIT=${CONFIG.limit})`);
         proxies = proxies.slice(0, CONFIG.limit);
     }
 
@@ -75,22 +75,22 @@ async function main(): Promise<void> {
         discovered[proxy.protocol]++;
     }
 
-    log(`  Discovered ${proxies.length.toLocaleString()} unique proxies\n`);
+    log(`  Discovered ${proxies.length.toLocaleString()} unique candidate routes\n`);
     for (const protocol of ["http", "https", "socks4", "socks5"] as Protocol[]) {
         log(`  ${protocol.toUpperCase().padEnd(7)} ${discovered[protocol].toLocaleString()}`);
     }
 
     // 5. Test & Benchmark
     log("\n========================================");
-    log("       Benchmarking & Testing Proxies   ");
+    log("      Benchmarking Route Performance    ");
     log("========================================");
     log("");
-    log(`Stage 1: Ultra-Fast Async TCP Socket Pre-Filter (${CONFIG.tcpConcurrency} parallel sockets)`);
-    log(`Stage 2: Health & Exit IP Verification (${endpoints.length} verification endpoints)`);
+    log(`Stage 1: Async TCP Socket Pre-Filter (${CONFIG.tcpConcurrency} parallel sockets)`);
+    log(`Stage 2: Transport Handshake & Egress Verification (${endpoints.length} verification endpoints)`);
     if (CONFIG.benchmarkTopWebsites) {
-        log(`Stage 3: Top ${CONFIG.topWebsites?.length || 50} Global Websites Benchmark (Google, Cloudflare, GitHub, etc.)`);
+        log(`Stage 3: Global Edge Reachability Benchmark (${CONFIG.topWebsites?.length || 50} destinations)`);
     }
-    log("Stage 4: Composite Best Proxy Scoring & Network Compatibility Ranking\n");
+    log("Stage 4: Composite Route Scoring & Telemetry Generation\n");
 
     const { results, benchmarks, stats } = await runProxyTests(proxies, endpoints, CONFIG, localPublicIp);
 

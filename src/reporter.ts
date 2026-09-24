@@ -105,19 +105,19 @@ export function generateHtmlReport(
 
     const bestProxyHtml = bestProxy ? `
         <div class="hero-card" id="best-proxy-hero">
-            <div class="hero-badge">${SVG_ICONS.trophy} TOP CANDIDATE FOR YOUR NETWORK</div>
+            <div class="hero-badge">${SVG_ICONS.trophy} OPTIMAL ROUTE FOR LOCAL ORIGIN</div>
             <div class="hero-main">
                 <div class="hero-left">
                     <div class="hero-title font-mono" id="hero-proxy-url">${bestProxy.proxy.protocol.toUpperCase()}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}</div>
                     <div class="hero-meta" id="hero-proxy-meta">
                         <span>${SVG_ICONS.globe} ${bestProxy.proxy.country || 'Global'}</span> &bull; 
                         <span>${SVG_ICONS.shield} ${bestProxy.anonymity}</span> &bull; 
-                        <span>${SVG_ICONS.globe} ${bestProxy.websitesPassed}/${bestProxy.websitesTotal} Top Websites Reachable (${bestProxy.websitePassRatePercent}%)</span>
+                        <span>${SVG_ICONS.globe} ${bestProxy.websitesPassed}/${bestProxy.websitesTotal} Edge Targets Reachable (${bestProxy.websitePassRatePercent}%)</span>
                     </div>
                 </div>
                 <div class="hero-stats">
                     <div class="hero-stat-box">
-                        <div class="hero-stat-label">Weighted Score</div>
+                        <div class="hero-stat-label">Composite Score</div>
                         <div class="hero-stat-value" id="hero-score" style="color: var(--accent);">${bestProxy.compositeScore} <span style="font-size: 0.9rem; color: var(--text-muted);">/100</span></div>
                     </div>
                     <div class="hero-stat-box">
@@ -129,7 +129,7 @@ export function generateHtmlReport(
                         <div class="hero-stat-value" id="hero-connect">${bestProxy.avgConnectTimeMs} ms</div>
                     </div>
                     <div>
-                        <button class="btn btn-primary" id="hero-copy-btn" onclick="copyToClipboard('${bestProxy.proxy.protocol}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}')">${SVG_ICONS.copy} Copy Best Proxy</button>
+                        <button class="btn btn-primary" id="hero-copy-btn" onclick="copyToClipboard('${bestProxy.proxy.protocol}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}')">${SVG_ICONS.copy} Copy Proxy URL</button>
                     </div>
                 </div>
             </div>
@@ -148,7 +148,7 @@ export function generateHtmlReport(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proxy Benchmark Report</title>
+    <title>Proxy Benchmark & Network Telemetry</title>
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -745,13 +745,13 @@ export function generateHtmlReport(
     <div class="container">
         <header>
             <div class="title-group">
-                <h1><span class="badge-pulse"></span> Proxy Benchmark & Network Finder</h1>
-                <p>Testing from your network (<span class="font-mono">${stats.localPublicIp || 'Direct'}</span>) &bull; Ranked by website reachability and latency</p>
+                <h1><span class="badge-pulse"></span> Proxy Benchmark & Network Telemetry</h1>
+                <p>Origin IP: <span class="font-mono">${stats.localPublicIp || 'Direct'}</span> &bull; Multiplexed latency and reachability telemetry across 50 global endpoints</p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="btn" onclick="toggleWeightsPanel()">${SVG_ICONS.settings} Scoring Weights</button>
-                <button class="btn btn-highlight" onclick="copyTop10Urls()">${SVG_ICONS.copy} Copy Top 10 Proxies</button>
-                <button class="btn" onclick="copyPassedUrls()">${SVG_ICONS.copy} Copy All Alive</button>
+                <button class="btn btn-highlight" onclick="copyTop10Urls()">${SVG_ICONS.copy} Copy Top 10 Routes</button>
+                <button class="btn" onclick="copyPassedUrls()">${SVG_ICONS.copy} Copy All Verified</button>
                 <button class="btn btn-primary" onclick="exportFilteredCsv()">${SVG_ICONS.download} Export CSV</button>
             </div>
         </header>
