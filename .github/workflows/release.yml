@@ -62,7 +62,7 @@ jobs:
 
             ### Quick Run
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxies/main/run.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.sh | bash
             ```
           files: |
             dist/proxy-benchmarker.min.mjs
