@@ -6,21 +6,45 @@ export type PresetMode = "home" | "safe" | "turbo";
 
 const envPreset = (process.env.PRESET || (process.env.TURBO === "true" || process.env.TURBO === "1" ? "turbo" : (process.env.SAFE === "true" || process.env.SAFE === "1" ? "safe" : "home"))).toLowerCase() as PresetMode;
 
-const PRESET_DEFAULTS: Record<PresetMode, { tcpConcurrency: number; concurrency: number; websiteConcurrency: number }> = {
+const PRESET_DEFAULTS: Record<PresetMode, {
+    tcpConcurrency: number;
+    concurrency: number;
+    websiteConcurrency: number;
+    tcpTimeoutMs: number;
+    timeoutSeconds: number;
+    connectTimeoutSeconds: number;
+    websiteTimeoutSeconds: number;
+    websiteConnectTimeoutSeconds: number;
+}> = {
     home: {
         tcpConcurrency: 80,
         concurrency: 25,
         websiteConcurrency: 5,
+        tcpTimeoutMs: 1200,
+        timeoutSeconds: 4.0,
+        connectTimeoutSeconds: 3.0,
+        websiteTimeoutSeconds: 4.5,
+        websiteConnectTimeoutSeconds: 3.0,
     },
     safe: {
         tcpConcurrency: 35,
         concurrency: 12,
         websiteConcurrency: 3,
+        tcpTimeoutMs: 1500,
+        timeoutSeconds: 4.5,
+        connectTimeoutSeconds: 3.0,
+        websiteTimeoutSeconds: 5.0,
+        websiteConnectTimeoutSeconds: 3.5,
     },
     turbo: {
-        tcpConcurrency: 1200,
-        concurrency: 250,
-        websiteConcurrency: 15,
+        tcpConcurrency: 1500,
+        concurrency: 300,
+        websiteConcurrency: 25,
+        tcpTimeoutMs: 800,
+        timeoutSeconds: 3.0,
+        connectTimeoutSeconds: 2.0,
+        websiteTimeoutSeconds: 3.5,
+        websiteConnectTimeoutSeconds: 2.5,
     },
 };
 
@@ -29,11 +53,11 @@ const activePreset = PRESET_DEFAULTS[envPreset] ?? PRESET_DEFAULTS.home;
 const DEFAULT_CONCURRENCY = activePreset.concurrency;
 const DEFAULT_TCP_CONCURRENCY = activePreset.tcpConcurrency;
 const DEFAULT_WEBSITE_CONCURRENCY = activePreset.websiteConcurrency;
-const DEFAULT_TCP_TIMEOUT_MS = 1200;
-const DEFAULT_TIMEOUT_SECONDS = 4.0;
-const DEFAULT_CONNECT_TIMEOUT_SECONDS = 3.0;
-const DEFAULT_WEBSITE_TIMEOUT_SECONDS = 4.5;
-const DEFAULT_WEBSITE_CONNECT_TIMEOUT_SECONDS = 3.0;
+const DEFAULT_TCP_TIMEOUT_MS = activePreset.tcpTimeoutMs;
+const DEFAULT_TIMEOUT_SECONDS = activePreset.timeoutSeconds;
+const DEFAULT_CONNECT_TIMEOUT_SECONDS = activePreset.connectTimeoutSeconds;
+const DEFAULT_WEBSITE_TIMEOUT_SECONDS = activePreset.websiteTimeoutSeconds;
+const DEFAULT_WEBSITE_CONNECT_TIMEOUT_SECONDS = activePreset.websiteConnectTimeoutSeconds;
 const DEFAULT_CLOUDFLARE_DNS = "1.1.1.1";
 const DEFAULT_ENDPOINT_RETRIES = 2;
 

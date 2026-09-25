@@ -163,14 +163,29 @@ async function main(): Promise<void> {
         CONFIG.tcpConcurrency = 35;
         CONFIG.concurrency = 12;
         CONFIG.websiteConcurrency = 3;
+        CONFIG.tcpTimeoutMs = 1500;
+        CONFIG.timeoutSeconds = 4.5;
+        CONFIG.connectTimeoutSeconds = 3.0;
+        CONFIG.websiteTimeoutSeconds = 5.0;
+        CONFIG.websiteConnectTimeoutSeconds = 3.5;
     } else if (preset === "home") {
         CONFIG.tcpConcurrency = 80;
         CONFIG.concurrency = 25;
         CONFIG.websiteConcurrency = 5;
+        CONFIG.tcpTimeoutMs = 1200;
+        CONFIG.timeoutSeconds = 4.0;
+        CONFIG.connectTimeoutSeconds = 3.0;
+        CONFIG.websiteTimeoutSeconds = 4.5;
+        CONFIG.websiteConnectTimeoutSeconds = 3.0;
     } else if (preset === "turbo") {
-        CONFIG.tcpConcurrency = 1200;
-        CONFIG.concurrency = 250;
-        CONFIG.websiteConcurrency = 15;
+        CONFIG.tcpConcurrency = 1500;
+        CONFIG.concurrency = 300;
+        CONFIG.websiteConcurrency = 25;
+        CONFIG.tcpTimeoutMs = 800;
+        CONFIG.timeoutSeconds = 3.0;
+        CONFIG.connectTimeoutSeconds = 2.0;
+        CONFIG.websiteTimeoutSeconds = 3.5;
+        CONFIG.websiteConnectTimeoutSeconds = 2.5;
     }
 
     if (concurrency !== undefined) CONFIG.concurrency = concurrency;
