@@ -1,4 +1,4 @@
-import type { ProxyItem } from "./types.js";
+import type { Protocol, ProxyItem } from "./types.js";
 
 export function formatProxy(proxy: ProxyItem): string {
     return `${proxy.protocol}://${proxy.ip}:${proxy.port}`;
@@ -21,6 +21,46 @@ export function deduplicateProxies(proxies: ProxyItem[]): ProxyItem[] {
     }
 
     return unique;
+}
+
+export function parseProxyString(input: string): ProxyItem[] {
+    const trimmed = input.trim();
+    if (!trimmed) return [];
+
+    // 1. Matches protocol://ip:port[,country]
+    const urlMatch = trimmed.match(/^([a-zA-Z0-9]+):\/\/([0-9.]+):([0-9]+)(?:,([a-zA-Z]{2}))?/);
+    if (urlMatch && urlMatch[1] && urlMatch[2] && urlMatch[3]) {
+        const protocol = urlMatch[1].toLowerCase() as Protocol;
+        const ip = urlMatch[2];
+        const port = Number.parseInt(urlMatch[3], 10);
+        const country = urlMatch[4];
+        if (["http", "https", "socks4", "socks5"].includes(protocol) && !Number.isNaN(port)) {
+            return [{
+                protocol,
+                ip,
+                port,
+                country,
+                raw: trimmed,
+            }];
+        }
+    }
+
+    // 2. Matches bare ip:port -> probe across common protocols
+    const ipPortMatch = trimmed.match(/^([0-9.]+):([0-9]+)$/);
+    if (ipPortMatch && ipPortMatch[1] && ipPortMatch[2]) {
+        const ip = ipPortMatch[1];
+        const port = Number.parseInt(ipPortMatch[2], 10);
+        if (!Number.isNaN(port)) {
+            return (["socks5", "http", "https", "socks4"] as Protocol[]).map((protocol) => ({
+                protocol,
+                ip,
+                port,
+                raw: `${protocol}://${ip}:${port}`,
+            }));
+        }
+    }
+
+    return [];
 }
 
 export function buildCurlProxyArgs(proxy: ProxyItem): string[] {

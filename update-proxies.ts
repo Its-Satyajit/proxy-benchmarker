@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
+import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import type { Protocol } from "./src/types.js";
+import type { Protocol, ProxyItem } from "./src/types.js";
 import { CONFIG } from "./src/config.js";
 import { log, ansi } from "./src/terminal.js";
 import { checkDependencies, prepareEndpoints, getLocalPublicIp } from "./src/dns.js";
 import { downloadCsv, parseCsv } from "./src/csv.js";
-import { deduplicateProxies } from "./src/proxy.js";
+import { deduplicateProxies, parseProxyString } from "./src/proxy.js";
 import { runProxyTests } from "./src/tester.js";
 import {
     writeProxyFiles,
@@ -17,11 +18,98 @@ import {
     printSummary
 } from "./src/reporter.js";
 
+async function parseCliArgs(rawArgs: string[]): Promise<{
+    customProxies: ProxyItem[];
+    limit?: number;
+    showHelp?: boolean;
+}> {
+    const customProxies: ProxyItem[] = [];
+    let limit: number | undefined;
+    let showHelp = false;
+
+    for (let i = 0; i < rawArgs.length; i++) {
+        const arg = rawArgs[i];
+        if (arg === "-h" || arg === "--help") {
+            showHelp = true;
+            continue;
+        }
+        if (arg === "-n" || arg === "--limit") {
+            const next = rawArgs[++i];
+            if (next) limit = Number.parseInt(next, 10);
+            continue;
+        }
+        if (arg.startsWith("--limit=")) {
+            limit = Number.parseInt(arg.split("=")[1], 10);
+            continue;
+        }
+        if (arg.startsWith("-")) {
+            continue;
+        }
+
+        // Check if argument is a local file
+        try {
+            const stat = await fs.stat(arg);
+            if (stat.isFile()) {
+                const content = await fs.readFile(arg, "utf8");
+                const parsed = parseCsv(content);
+                customProxies.push(...parsed);
+                continue;
+            }
+        } catch {
+            // Not a file, try parsing as proxy string
+        }
+
+        const parsed = parseProxyString(arg);
+        if (parsed.length > 0) {
+            customProxies.push(...parsed);
+        }
+    }
+
+    return { customProxies, limit, showHelp };
+}
+
+function printHelp(): void {
+    log(`
+Proxy Benchmark & Network Telemetry Suite
+
+Usage:
+  nub update-proxies.ts [options] [proxy...] [file...]
+  curl -fsSL https://.../run.sh | bash -s -- [proxy...]
+  irm https://.../run.ps1 | iex [proxy...]
+
+Examples:
+  # Benchmark full proxy feed
+  nub update-proxies.ts
+
+  # Benchmark a single specific proxy route
+  nub update-proxies.ts socks5://64.227.186.105:1080
+
+  # Benchmark multiple custom routes
+  nub update-proxies.ts http://1.2.3.4:8080 socks5://64.227.186.105:1080
+
+  # Benchmark custom list from file
+  nub update-proxies.ts my-proxies.txt
+
+Options:
+  -n, --limit <num>   Limit the number of proxies to test
+  -h, --help          Show this help message
+`);
+}
+
 /* ============================================================
  * Main Workflow
  * ============================================================ */
 
 async function main(): Promise<void> {
+    const { customProxies, limit, showHelp } = await parseCliArgs(process.argv.slice(2));
+
+    if (showHelp) {
+        printHelp();
+        process.exit(0);
+    }
+
+    const effectiveLimit = limit !== undefined ? limit : CONFIG.limit;
+
     log("");
     log("========================================");
     log("   Proxy Benchmark & Best Network Finder ");
@@ -48,36 +136,56 @@ async function main(): Promise<void> {
     // 2. Resolve Test Endpoint DNS
     const endpoints = await prepareEndpoints(CONFIG.testEndpoints, CONFIG);
 
-    // 3. Download Proxy List
-    log("========================================");
-    log("     Fetching Candidate Route Feeds     ");
-    log("========================================");
-    log("");
+    let proxies: ProxyItem[] = [];
 
-    const csv = await downloadCsv(CONFIG.csvUrls, CONFIG);
+    if (customProxies.length > 0) {
+        // Use custom CLI endpoints
+        log("========================================");
+        log("     Target Endpoints (CLI Input)       ");
+        log("========================================");
+        log("");
+        proxies = deduplicateProxies(customProxies);
+        log(`Loaded ${proxies.length} custom route(s) to benchmark:`);
+        for (const p of proxies) {
+            log(`  ${ansi.cyan}${p.protocol.toUpperCase()}${ansi.reset}://${p.ip}:${p.port}`);
+        }
+        log("");
+    } else {
+        // 3. Download Proxy List Feed
+        log("========================================");
+        log("     Fetching Candidate Route Feeds     ");
+        log("========================================");
+        log("");
 
-    // 4. Parse and Normalize
-    log(`\n${ansi.cyan}Parsing candidate endpoints...${ansi.reset}`);
-    const rows = parseCsv(csv);
-    let proxies = deduplicateProxies(rows);
+        const csv = await downloadCsv(CONFIG.csvUrls, CONFIG);
+
+        // 4. Parse and Normalize
+        log(`\n${ansi.cyan}Parsing candidate endpoints...${ansi.reset}`);
+        const rows = parseCsv(csv);
+        proxies = deduplicateProxies(rows);
+
+        if (proxies.length === 0) {
+            throw new Error("Candidate feed contained no valid endpoints.");
+        }
+
+        if (effectiveLimit > 0 && effectiveLimit < proxies.length) {
+            log(`  Limiting benchmark to first ${effectiveLimit} candidates (LIMIT=${effectiveLimit})`);
+            proxies = proxies.slice(0, effectiveLimit);
+        }
+
+        const discovered: Record<Protocol, number> = { http: 0, https: 0, socks4: 0, socks5: 0 };
+        for (const proxy of proxies) {
+            discovered[proxy.protocol]++;
+        }
+
+        log(`  Discovered ${proxies.length.toLocaleString()} unique candidate routes\n`);
+        for (const protocol of ["http", "https", "socks4", "socks5"] as Protocol[]) {
+            log(`  ${protocol.toUpperCase().padEnd(7)} ${discovered[protocol].toLocaleString()}`);
+        }
+    }
 
     if (proxies.length === 0) {
-        throw new Error("Candidate feed contained no valid endpoints.");
-    }
-
-    if (CONFIG.limit > 0 && CONFIG.limit < proxies.length) {
-        log(`  Limiting benchmark to first ${CONFIG.limit} candidates (LIMIT=${CONFIG.limit})`);
-        proxies = proxies.slice(0, CONFIG.limit);
-    }
-
-    const discovered: Record<Protocol, number> = { http: 0, https: 0, socks4: 0, socks5: 0 };
-    for (const proxy of proxies) {
-        discovered[proxy.protocol]++;
-    }
-
-    log(`  Discovered ${proxies.length.toLocaleString()} unique candidate routes\n`);
-    for (const protocol of ["http", "https", "socks4", "socks5"] as Protocol[]) {
-        log(`  ${protocol.toUpperCase().padEnd(7)} ${discovered[protocol].toLocaleString()}`);
+        throw new Error("No valid candidate routes to test.");
     }
 
     // 5. Test & Benchmark
@@ -85,7 +193,7 @@ async function main(): Promise<void> {
     log("      Benchmarking Route Performance    ");
     log("========================================");
     log("");
-    log(`Stage 1: Async TCP Socket Pre-Filter (${CONFIG.tcpConcurrency} parallel sockets)`);
+    log(`Stage 1: Async TCP Socket Pre-Filter (${Math.min(CONFIG.tcpConcurrency, proxies.length)} parallel sockets)`);
     log(`Stage 2: Transport Handshake & Egress Verification (${endpoints.length} verification endpoints)`);
     if (CONFIG.benchmarkTopWebsites) {
         log(`Stage 3: Global Edge Reachability Benchmark (${CONFIG.topWebsites?.length || 50} destinations)`);

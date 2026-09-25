@@ -1,4 +1,9 @@
 # Proxy Benchmarker - Windows PowerShell Runner
+param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$CliArgs
+)
+
 $ErrorActionPreference = "Stop"
 
 $RepoOwner = "Its-Satyajit"
@@ -101,17 +106,18 @@ if (-not $Downloaded) {
 Write-Host ">> Executing benchmark using $Runtime..." -ForegroundColor Cyan
 Write-Host ""
 
+$AllArgs = if ($CliArgs -and $CliArgs.Count -gt 0) { $CliArgs } else { $args }
 $ExitCode = 0
 try {
     switch ($Runtime) {
-        "nub"  { & nub $TempFile $args; $ExitCode = $LASTEXITCODE }
-        "bun"  { & bun run $TempFile $args; $ExitCode = $LASTEXITCODE }
-        "node" { & node $TempFile $args; $ExitCode = $LASTEXITCODE }
-        "deno" { & deno run -A $TempFile $args; $ExitCode = $LASTEXITCODE }
-        "npx"  { & npx --yes node $TempFile $args; $ExitCode = $LASTEXITCODE }
-        "pnpm" { & pnpm exec node $TempFile $args; $ExitCode = $LASTEXITCODE }
-        "yarn" { & yarn node $TempFile $args; $ExitCode = $LASTEXITCODE }
-        Default { & node $TempFile $args; $ExitCode = $LASTEXITCODE }
+        "nub"  { & nub $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
+        "bun"  { & bun run $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
+        "node" { & node $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
+        "deno" { & deno run -A $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
+        "npx"  { & npx --yes node $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
+        "pnpm" { & pnpm exec node $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
+        "yarn" { & yarn node $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
+        Default { & node $TempFile @AllArgs; $ExitCode = $LASTEXITCODE }
     }
 } catch {
     $ExitCode = 1

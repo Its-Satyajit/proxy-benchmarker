@@ -13,27 +13,37 @@ A 3-stage non-blocking pipeline evaluates 26,000+ candidate routes in under 90 s
 ### Linux & macOS
 
 ```bash
-# Fast global CDN (jsDelivr)
+# Benchmark full candidate proxy list (fast jsDelivr CDN)
 curl -fsSL https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.sh | bash
 
+# Benchmark a single specific proxy route
+curl -fsSL https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.sh | bash -s -- socks5://64.227.186.105:1080
+
 # GitHub Raw fallback
-curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.sh | bash -s -- socks5://64.227.186.105:1080
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-# Fast global CDN (jsDelivr)
+# Benchmark full candidate proxy list (fast jsDelivr CDN)
 irm https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.ps1 | iex
 
+# Benchmark a single specific proxy route
+& ([scriptblock]::Create((irm https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.ps1))) socks5://64.227.186.105:1080
+
 # GitHub Raw fallback
-irm https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.ps1 | iex
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.ps1))) socks5://64.227.186.105:1080
 ```
 
 ### Cross-platform (nub / node)
 
 ```bash
+# Full candidate run
 nub launcher.ts
+
+# Benchmark a specific proxy or list
+nub update-proxies.ts socks5://64.227.186.105:1080
 ```
 
 ---
