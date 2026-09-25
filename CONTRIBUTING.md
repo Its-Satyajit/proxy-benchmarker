@@ -47,8 +47,9 @@ Releases are automatic. On any push to `master` that touches source, the `Releas
 1. Installs dependencies, type-checks, runs the test suite, and builds `dist/proxy-benchmarker.min.mjs`.
 2. Publishes a tagged release (`v1.0.<run number>`) with that bundle as an asset.
 3. Commits the same bundle back into `dist/` on `master` and moves the pinned runner ref forward in `run.sh` and `run.ps1` to the tag it just published.
+4. Dispatches `CI` on that commit, because a push made with the default `GITHUB_TOKEN` does not start other workflows on its own.
 
-So the pin is never stale and `/dist` on `master` always matches the released artifact. The sync commit touches only `run.sh`, `run.ps1`, and `dist/`, which the release workflow ignores, so it cannot re-trigger itself; `CI` does run on that commit, and it re-verifies that `dist` is byte-identical to a fresh build and that the pinned ref resolves on jsDelivr.
+So the pin is never stale and `/dist` on `master` always matches the released artifact. The sync commit touches only `run.sh`, `run.ps1`, and `dist/`, which the release workflow ignores, so it cannot re-trigger itself.
 
 If a release fails partway, re-run the workflow. The steps are idempotent: the pin is rewritten to the same value and the sync step exits early when there is nothing to commit.
 

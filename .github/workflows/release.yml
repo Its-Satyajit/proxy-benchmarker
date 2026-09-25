@@ -118,3 +118,13 @@ jobs:
 
           git commit -m "chore(release): pin runner to ${VERSION} and refresh dist"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
+          echo "pushed=1" >> "$GITHUB_ENV"
+
+      # A push made with the default GITHUB_TOKEN does not start other workflows,
+      # so the commit above would otherwise never be verified. workflow_dispatch
+      # is the documented exception.
+      - name: Verify the sync commit in CI
+        if: env.pushed == '1'
+        run: gh workflow run ci.yml --ref "${{ github.event.repository.default_branch }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

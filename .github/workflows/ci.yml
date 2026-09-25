@@ -19,6 +19,9 @@ on:
     branches:
       - main
       - master
+  # Manual runs, and the dispatch the release workflow uses to verify the
+  # dist/pin commit it pushes (GITHUB_TOKEN pushes do not trigger workflows).
+  workflow_dispatch:
 
 permissions:
   contents: read
