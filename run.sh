@@ -4,8 +4,8 @@ set -e
 REPO_OWNER="Its-Satyajit"
 REPO_NAME="proxy-benchmarker"
 # Pinned so `curl | bash` runs one immutable bundle. Override to track a branch
-# or commit: PROXY_BENCHMARKER_REF=master, or a tag like v1.0.46, or a commit SHA.
-BUNDLE_REF="${PROXY_BENCHMARKER_REF:-v1.0.46}"
+# or commit: PROXY_BENCHMARKER_REF=master, or a tag like v1.0.48, or a commit SHA.
+BUNDLE_REF="${PROXY_BENCHMARKER_REF:-v1.0.48}"
 JSDELIVR_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@${BUNDLE_REF}/dist/proxy-benchmarker.min.mjs"
 RELEASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${BUNDLE_REF}/proxy-benchmarker.min.mjs"
 RAW_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BUNDLE_REF}/dist/proxy-benchmarker.min.mjs"
