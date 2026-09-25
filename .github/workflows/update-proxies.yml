@@ -1,9 +1,6 @@
 name: Update Proxies & Publish Report
 
 on:
-  schedule:
-    # Run every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 permissions:
