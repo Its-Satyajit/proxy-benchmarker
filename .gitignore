@@ -10,3 +10,9 @@ node_modules/
 
 # Local review notes
 dont-commit-this-to-github.md
+benchmark-report.html
+benchmark-report.json
+socks4.txt
+socks5.txt
+http.txt
+https.txt
