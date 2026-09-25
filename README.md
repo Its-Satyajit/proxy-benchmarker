@@ -2,7 +2,7 @@
 
 Asynchronous network telemetry and proxy benchmarking suite. Measures TCP handshake latency, TLS negotiation, Time to First Byte (TTFB), transfer throughput, and reachability across 50 global edge endpoints.
 
-A 3-stage non-blocking pipeline evaluates 26,000+ candidate routes in under 90 seconds, outputting normalized proxy configurations (`http.txt`, `socks5.txt`), machine-readable JSON telemetry (`benchmark-report.json`), and an interactive client-side report.
+A 3-stage non-blocking pipeline evaluates 50,000+ candidate routes aggregated and deduplicated across 10 open-source upstream feeds in under 90 seconds, outputting normalized proxy configurations (`http.txt`, `socks5.txt`), machine-readable JSON telemetry (`benchmark-report.json`), and an interactive client-side report.
 
 ![Interactive benchmark report](images/benchmark-report.png)
 
@@ -176,7 +176,7 @@ Every run writes granular JSON telemetry to `benchmark-report.json`:
 │   ├── config.ts            # Options and defaults
 │   ├── websites.ts          # 50 target websites list
 │   ├── dns.ts               # DNS resolution and public IP check
-│   ├── csv.ts               # Proxifly free-proxy-list downloader and CSV parser
+│   ├── csv.ts               # Multi-feed downloader, format parser, and Set deduplicator
 │   ├── proxy.ts             # Normalization and curl arguments
 │   ├── tester.ts            # 3-stage funnel engine
 │   ├── reporter.ts          # HTML report builder and file exporter
@@ -198,15 +198,27 @@ Pushes to `master` trigger `.github/workflows/release.yml`, which runs `tsc --no
 
 ---
 
-## Upstream projects and data sources
+## Upstream proxy feeds & credits
 
-* [proxifly/free-proxy-list](https://github.com/proxifly/free-proxy-list) for raw proxy list data.
-* [jsDelivr](https://www.jsdelivr.com) for high-performance global edge CDN delivery.
-* [cURL](https://curl.se) for network probing.
-* [Iconify](https://iconify.design) for SVG vector icons.
-* [Nub](https://nubjs.com) for Node toolchain execution.
+Candidate route discovery aggregates and deduplicates data across 10 open-source proxy repositories:
+
+* [proxifly/free-proxy-list](https://github.com/proxifly/free-proxy-list) - Live CSV proxy dataset with protocol and country metadata.
+* [ProxyScrape/free-proxy-list](https://github.com/ProxyScrape/free-proxy-list) - Frequently updated HTTP, HTTPS, SOCKS4, and SOCKS5 feeds.
+* [hproxy-com/free-proxy-list](https://github.com/hproxy-com/free-proxy-list) - Multi-protocol verified candidate CSVs.
+* [proxmint/free-proxy-list](https://github.com/proxmint/free-proxy-list) - Unified protocol URI endpoint lists.
+* [proxio-io/proxy-list](https://github.com/proxio-io/proxy-list) - High-volume global candidate endpoint lists.
+* [iplocate/free-proxy-list](https://github.com/iplocate/free-proxy-list) - Worldwide proxy route feeds.
+* [databay-labs/free-proxy-list](https://github.com/databay-labs/free-proxy-list) - Dedicated HTTP, SOCKS4, and SOCKS5 channel feeds.
+* [monosans/proxy-list](https://github.com/monosans/proxy-list) - Continuously scraped and verified proxy lists.
+
+### Infrastructure & tooling credits
+
+* [jsDelivr](https://www.jsdelivr.com) for high-performance global edge CDN delivery and GitHub proxying.
+* [cURL](https://curl.se) for fast, low-overhead transport probing.
+* [Iconify](https://iconify.design) for SVG vector icons in the interactive report.
+* [Nub](https://nubjs.com) for Node toolchain orchestration.
 * [esbuild](https://esbuild.github.io) for bundling.
-* Verification endpoints: Cloudflare, Google DNS, icanhazip.com, ifconfig.co, ipify.org, ip-api.com, seeip.org, myip.la.
+* Network verification endpoints: Cloudflare, Google DNS, `api.ipify.org`, `icanhazip.com`, `ifconfig.me`, `ifconfig.co`, `ident.me`, `checkip.amazonaws.com`, `ip.me`, `api.my-ip.io`, `ipinfo.io`, `myexternalip.com`.
 
 ---
 
