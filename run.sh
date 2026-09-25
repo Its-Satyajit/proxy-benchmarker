@@ -3,7 +3,8 @@ set -e
 
 REPO_OWNER="Its-Satyajit"
 REPO_NAME="proxy-benchmarker"
-JSDELIVR_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@master/dist/proxy-benchmarker.min.mjs"
+JSDELIVR_LATEST_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@latest/dist/proxy-benchmarker.min.mjs"
+JSDELIVR_MASTER_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@master/dist/proxy-benchmarker.min.mjs"
 RELEASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download/proxy-benchmarker.min.mjs"
 RAW_MASTER_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/master/dist/proxy-benchmarker.min.mjs"
 RAW_MAIN_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/proxy-benchmarker.min.mjs"
@@ -73,12 +74,14 @@ echo " Proxy Benchmark & Network Telemetry    "
 echo "========================================"
 echo ""
 
-# Download latest minified bundle (jsDelivr CDN -> release asset -> master raw -> main raw -> local dist)
+# Download latest minified bundle (jsDelivr @latest -> jsDelivr @master -> release asset -> master raw -> main raw -> local dist)
 echo "[INFO] Fetching latest proxy benchmark bundle..."
-if fetch_asset "$JSDELIVR_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
+if fetch_asset "$JSDELIVR_LATEST_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
+    echo "[OK] Downloaded latest release bundle via jsDelivr CDN."
+elif fetch_asset "$JSDELIVR_MASTER_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
     echo "[OK] Downloaded latest bundle via jsDelivr CDN."
 elif fetch_asset "$RELEASE_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
-    echo "[OK] Downloaded latest release asset."
+    echo "[OK] Downloaded latest release asset from GitHub."
 elif fetch_asset "$RAW_MASTER_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
     echo "[OK] Downloaded latest bundle from master branch."
 elif fetch_asset "$RAW_MAIN_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
