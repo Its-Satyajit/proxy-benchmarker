@@ -598,7 +598,7 @@ export async function runProxyTests(
             );
         }
 
-        const stage3Concurrency = Math.min(Math.max(Math.floor(stage2Concurrency / 2), 10), aliveCandidates.length);
+        const stage3Concurrency = Math.min(Math.max(Math.floor(stage2Concurrency / 10), 5), 15, aliveCandidates.length);
 
         async function workerStage3() {
             while (true) {

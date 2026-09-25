@@ -70,9 +70,9 @@ export function buildCurlProxyArgs(proxy: ProxyItem): string[] {
         case "https":
             return ["-x", `https://${proxy.ip}:${proxy.port}`];
         case "socks4":
-            return ["--socks4", `${proxy.ip}:${proxy.port}`];
+            return ["--socks4a", `${proxy.ip}:${proxy.port}`];
         case "socks5":
-            return ["--socks5", `${proxy.ip}:${proxy.port}`];
+            return ["--socks5-hostname", `${proxy.ip}:${proxy.port}`];
         default:
             return ["-x", `${proxy.protocol}://${proxy.ip}:${proxy.port}`];
     }

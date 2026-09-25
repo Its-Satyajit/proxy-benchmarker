@@ -1,9 +1,6 @@
 # Dependencies
 node_modules/
 
-# Build outputs
-dist/
-
 # Benchmark output files & reports
 socks5.txt
 socks4.txt

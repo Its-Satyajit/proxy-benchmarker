@@ -61,6 +61,12 @@ fetch_asset() {
     else
         return 1
     fi
+    if [ -f "$dest" ] && [ "$(wc -c < "$dest" 2>/dev/null || echo 0)" -gt 1000 ]; then
+        return 0
+    else
+        rm -f "$dest" 2>/dev/null || true
+        return 1
+    fi
 }
 
 if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
