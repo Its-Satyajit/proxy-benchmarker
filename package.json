@@ -34,6 +34,6 @@
   "dependencies": {
     "@octokit/rest": "^22.0.1",
     "bullmq": "^6.3.8",
-    "ioredis": "^5.8.2"
+    "ioredis": "^6.0.0"
   }
 }
