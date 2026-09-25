@@ -1,0 +1,61 @@
+name: Update Proxies & Publish Report
+
+on:
+  schedule:
+    # Run every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "proxy-benchmark"
+  cancel-in-progress: true
+
+jobs:
+  benchmark-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1. Ultra-fast direct execution using pre-compiled bundle and pre-installed Node.js 20
+      - name: Run benchmark in Turbo mode
+        run: node dist/proxy-benchmarker.min.mjs --turbo
+
+      # 2. Push updated proxy lists & telemetry to master
+      - name: Commit and push proxy lists
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add http.txt https.txt socks4.txt socks5.txt benchmark-report.json
+          if git diff --staged --quiet; then
+            echo "No proxy updates detected."
+          else
+            git commit -m "chore(proxies): update verified proxy lists and telemetry [skip ci]"
+            git push origin master
+          fi
+
+      # 3. Deploy interactive HTML report to GitHub Pages
+      - name: Prepare Pages directory
+        run: |
+          mkdir -p public
+          cp benchmark-report.html public/index.html
+          cp -r images public/ 2>/dev/null || true
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./public"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
