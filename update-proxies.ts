@@ -139,7 +139,7 @@ Examples:
 Options:
   --safe              Ultra-safe profile (35 TCP sockets, 12 workers) for budget routers
   --home              Home router profile (80 TCP sockets, 25 workers - default)
-  --turbo, --vps      High-performance profile (600 TCP sockets, 150 workers)
+  --turbo, --vps      High-performance profile (1,500 TCP sockets, 300 workers)
   -c, --concurrency   Override parallel worker count
   --tcp-concurrency   Override parallel TCP socket pre-filter count
   -n, --limit <num>   Limit the number of proxies to test

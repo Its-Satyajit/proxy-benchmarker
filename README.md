@@ -46,6 +46,9 @@ nub update-proxies.ts
 # Run with a limit and safe preset
 nub update-proxies.ts --safe -n 50
 
+# Turbo uses 1,500 TCP sockets and 300 workers
+nub update-proxies.ts --turbo
+
 # Benchmark a specific proxy or local file
 nub update-proxies.ts socks5://64.227.186.105:1080
 nub update-proxies.ts my-proxies.txt
