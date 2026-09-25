@@ -42,19 +42,18 @@ nub run build
 
 ## Cutting a release
 
-`run.sh` and `run.ps1` pin an immutable release ref so `curl | bash` is reproducible, which means the pin has to move forward after every release. The release workflow tags automatically on push to `master`, so a release exists as soon as that workflow is green.
+Releases are automatic. On any push to `master` that touches source, the `Release Minified Bundle` workflow:
+
+1. Installs dependencies, type-checks, runs the test suite, and builds `dist/proxy-benchmarker.min.mjs`.
+2. Publishes a tagged release (`v1.0.<run number>`) with that bundle as an asset.
+3. Commits the same bundle back into `dist/` on `master` and moves the pinned runner ref forward in `run.sh` and `run.ps1` to the tag it just published.
+
+So the pin is never stale and `/dist` on `master` always matches the released artifact. The sync commit touches only `run.sh`, `run.ps1`, and `dist/`, which the release workflow ignores, so it cannot re-trigger itself; `CI` does run on that commit, and it re-verifies that `dist` is byte-identical to a fresh build and that the pinned ref resolves on jsDelivr.
+
+If a release fails partway, re-run the workflow. The steps are idempotent: the pin is rewritten to the same value and the sync step exits early when there is nothing to commit.
+
+For an emergency manual override, users can point the runner at any ref without changing the repository:
 
 ```bash
-# 1. Confirm the release workflow published a tag for the commit you landed
-gh release list --limit 1
-
-# 2. Point the runner at that tag in both scripts
-#    run.sh:  BUNDLE_REF="${PROXY_BENCHMARKER_REF:-v1.0.46}"
-#    run.ps1: $BundleRef = if ($env:PROXY_BENCHMARKER_REF) { $env:PROXY_BENCHMARKER_REF } else { "v1.0.46" }
-
-# 3. Update README.md if it mentions a specific version
-
-# 4. Commit and land; CI verifies the pinned ref actually resolves
+PROXY_BENCHMARKER_REF=master curl -fsSL https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.sh | bash
 ```
-
-The `Verify Pinned Runner Ref` CI step requests the pinned bundle from jsDelivr and fails the build when the pin does not resolve, so a forgotten bump is caught before users hit it.

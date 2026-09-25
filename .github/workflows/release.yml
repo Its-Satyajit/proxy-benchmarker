@@ -5,16 +5,27 @@ on:
     branches:
       - main
       - master
+    # The sync step below commits run.sh, run.ps1 and dist, so those paths must
+    # not re-trigger this workflow or the release would loop on itself.
     paths-ignore:
       - "README.md"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
       - ".gitignore"
       - "*.txt"
       - "*.html"
       - "*.json"
+      - "run.sh"
+      - "run.ps1"
+      - "dist/**"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-bundle
+  cancel-in-progress: false
 
 jobs:
   build-and-release:
@@ -42,6 +53,9 @@ jobs:
       - name: Typecheck TypeScript
         run: nub run typecheck
 
+      - name: Run Test Suite
+        run: nub run test
+
       - name: Build and Minify Bundle with Nub
         run: nub run build
 
@@ -51,6 +65,8 @@ jobs:
           VERSION="v1.0.${{ github.run_number }}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      # The tag points at the commit whose source produced this bundle. The sync
+      # step below then commits the same bundle plus the new pin on top of it.
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
@@ -70,3 +86,35 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync dist artifact and runner pin to master
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.tag.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 1. Publish the exact bundle that was just released back into /dist.
+          git add dist/proxy-benchmarker.min.mjs
+
+          # 2. Move the immutable runner pin forward in both entry scripts.
+          sed -i -E "s/v1\.0\.[0-9]+/${VERSION}/g" run.sh run.ps1
+
+          # Fail loudly instead of shipping a stale pin.
+          grep -q "PROXY_BENCHMARKER_REF:-${VERSION}" run.sh || {
+            echo "::error::run.sh pin was not set to ${VERSION}"; exit 1;
+          }
+          grep -q "\"${VERSION}\"" run.ps1 || {
+            echo "::error::run.ps1 pin was not set to ${VERSION}"; exit 1;
+          }
+
+          git add run.sh run.ps1
+
+          if git diff --quiet --cached; then
+            echo "Nothing to sync: dist and runner pins already at ${VERSION}."
+            exit 0
+          fi
+
+          git commit -m "chore(release): pin runner to ${VERSION} and refresh dist"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}"

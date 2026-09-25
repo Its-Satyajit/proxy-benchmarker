@@ -268,7 +268,7 @@ nub update-proxies.ts my-proxies.txt
 ## CI
 
 - **`CI`** (`.github/workflows/ci.yml`) installs dependencies, type-checks, runs the test suite, rebuilds the bundle, and fails if the committed `dist/proxy-benchmarker.min.mjs` is stale. Source and shipped bundle can never drift apart.
-- **`Release Minified Bundle`** (`.github/workflows/release.yml`) publishes the freshly built bundle as a tagged release asset. Those tags are what `run.sh` and `run.ps1` pin to.
+- **`Release Minified Bundle`** (`.github/workflows/release.yml`) publishes the freshly built bundle as a tagged release asset, then commits that same bundle back into `dist/` and moves the pinned ref in `run.sh`/`run.ps1` forward to the tag it just published. The pin therefore never goes stale, and `dist` on `master` always matches the release artifact.
 - **Benchmark + Pages publishing** is temporarily disabled. Its definition is retained at `.github/workflows/update-proxies.yml.disabled`; rename it back to `update-proxies.yml` to re-enable it. It installs dependencies, type-checks, tests, and builds from source before running the benchmark, so it never executes a stale bundle.
 
 ---
