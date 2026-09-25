@@ -8,6 +8,7 @@
     "benchmark": "nub update-proxies.ts",
     "launcher": "nub launcher.ts",
     "typecheck": "tsc --noEmit",
+    "test": "esbuild test/*.test.ts --bundle --platform=node --format=esm --outdir=.test-build --out-extension:.js=.mjs && node --test .test-build/*.test.mjs",
     "build:bundle": "esbuild update-proxies.ts --bundle --platform=node --format=esm --minify --outfile=dist/proxy-benchmarker.min.mjs",
     "build": "esbuild update-proxies.ts --bundle --platform=node --format=esm --minify --outfile=dist/proxy-benchmarker.min.mjs"
   },

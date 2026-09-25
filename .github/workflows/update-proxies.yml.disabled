@@ -27,7 +27,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. Ultra-fast direct execution using pre-compiled bundle and pre-installed Node.js 20
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Nub
+        run: |
+          curl -fsSL https://nubjs.com/install.sh | bash
+          echo "$HOME/.nub/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: nub install
+
+      - name: Typecheck and test
+        run: |
+          nub run typecheck
+          nub run test
+
+      # Build from source so the run can never execute a stale committed bundle.
+      - name: Build bundle from source
+        run: nub run build
+
       - name: Run benchmark in Turbo mode
         if: ${{ !inputs.deploy_only }}
         run: node dist/proxy-benchmarker.min.mjs --turbo

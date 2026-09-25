@@ -3,11 +3,12 @@ set -e
 
 REPO_OWNER="Its-Satyajit"
 REPO_NAME="proxy-benchmarker"
-JSDELIVR_LATEST_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@latest/dist/proxy-benchmarker.min.mjs"
-JSDELIVR_MASTER_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@master/dist/proxy-benchmarker.min.mjs"
-RELEASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download/proxy-benchmarker.min.mjs"
-RAW_MASTER_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/master/dist/proxy-benchmarker.min.mjs"
-RAW_MAIN_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/dist/proxy-benchmarker.min.mjs"
+# Pinned so `curl | bash` runs one immutable bundle. Override to track a branch
+# or commit: PROXY_BENCHMARKER_REF=master, or a tag like v1.0.44, or a commit SHA.
+BUNDLE_REF="${PROXY_BENCHMARKER_REF:-v1.0.44}"
+JSDELIVR_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@${BUNDLE_REF}/dist/proxy-benchmarker.min.mjs"
+RELEASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${BUNDLE_REF}/proxy-benchmarker.min.mjs"
+RAW_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BUNDLE_REF}/dist/proxy-benchmarker.min.mjs"
 TEMP_FILE="/tmp/proxy-benchmarker.$$.mjs"
 REPORT_FILE="$(pwd)/benchmark-report.html"
 
@@ -80,23 +81,20 @@ echo " Proxy Benchmark & Network Telemetry    "
 echo "========================================"
 echo ""
 
-# Download latest minified bundle (jsDelivr @latest -> jsDelivr @master -> release asset -> master raw -> main raw -> local dist)
-echo "[INFO] Fetching latest proxy benchmark bundle..."
-if fetch_asset "$JSDELIVR_LATEST_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
-    echo "[OK] Downloaded latest release bundle via jsDelivr CDN."
-elif fetch_asset "$JSDELIVR_MASTER_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
-    echo "[OK] Downloaded latest bundle via jsDelivr CDN."
+# Download the pinned bundle (jsDelivr -> release asset -> raw), no moving refs
+echo "[INFO] Fetching pinned bundle (ref: ${BUNDLE_REF})..."
+if fetch_asset "$JSDELIVR_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
+    echo "[OK] Downloaded bundle via jsDelivr CDN (ref ${BUNDLE_REF})."
 elif fetch_asset "$RELEASE_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
-    echo "[OK] Downloaded latest release asset from GitHub."
-elif fetch_asset "$RAW_MASTER_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
-    echo "[OK] Downloaded latest bundle from master branch."
-elif fetch_asset "$RAW_MAIN_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
-    echo "[OK] Downloaded latest bundle from main branch."
+    echo "[OK] Downloaded release asset for ${BUNDLE_REF}."
+elif fetch_asset "$RAW_URL" "$TEMP_FILE" && [ -s "$TEMP_FILE" ]; then
+    echo "[OK] Downloaded bundle for ${BUNDLE_REF} from raw.githubusercontent.com."
 elif [ -f "./dist/proxy-benchmarker.min.mjs" ]; then
     echo "[WARN] Using local bundle: ./dist/proxy-benchmarker.min.mjs"
     TEMP_FILE="./dist/proxy-benchmarker.min.mjs"
 else
-    echo "[ERROR] Failed to download benchmark bundle."
+    echo "[ERROR] Failed to download bundle for ref '${BUNDLE_REF}'."
+    echo "        Set PROXY_BENCHMARKER_REF to an existing tag, branch or commit, e.g. PROXY_BENCHMARKER_REF=master"
     exit 1
 fi
 

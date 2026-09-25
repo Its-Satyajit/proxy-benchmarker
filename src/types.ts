@@ -2,7 +2,16 @@ export type Protocol = "http" | "https" | "socks4" | "socks5";
 
 export type LatencyTier = "EXCELLENT" | "GOOD" | "MODERATE" | "SLOW" | "DEAD";
 
-export type AnonymityStatus = "ELITE / ANONYMOUS" | "TRANSPARENT (LEAKING)" | "UNKNOWN";
+export type PresetName = "safe" | "home" | "turbo";
+
+/**
+ * What the egress check actually proves: the observed exit IP is the same or
+ * different from the origin IP. Header-level anonymity (X-Forwarded-For, Via,
+ * Forwarded) is NOT measured, so no anonymity claim is derived from this.
+ */
+export type EgressStatus = "DIFFERENT_EGRESS_IP" | "SAME_EGRESS_IP" | "UNKNOWN";
+
+export type PerformanceSource = "websites" | "egress-endpoints";
 
 export interface ProxyItem {
     protocol: Protocol;
@@ -72,7 +81,6 @@ export interface ScoreBreakdown {
     connectTime: number;
     ttfb: number;
     speed: number;
-    anonymity: number;
 }
 
 export interface BenchmarkItem {
@@ -83,15 +91,29 @@ export interface BenchmarkItem {
     compositeScore: number;
     scoreBreakdown: ScoreBreakdown;
     exitIp: string | null;
-    anonymity: AnonymityStatus;
-    endpointsTested: number;
+    egressStatus: EgressStatus;
+    verificationStrategy: "fast" | "full";
+    /** Probe requests launched during egress verification. */
+    endpointsStarted: number;
+    /** Probe results actually collected (aborted losers are not counted). */
+    endpointsCompleted: number;
     endpointsPassed: number;
+    /** Endpoints configured for this run. */
     endpointsTotal: number;
-    passRatePercent: number;
-    websitesTested: number;
+    /** Passed / started, so a 2-request fast check never reports 1/11. */
+    endpointPassRatePercent: number;
+    /** Website targets configured for this run. */
+    websitesAvailable: number;
+    /** Website probes actually attempted (may be lower than available on early exit). */
+    websitesAttempted: number;
     websitesPassed: number;
-    websitesTotal: number;
     websitePassRatePercent: number;
+    /** True when the website stage stopped early after the first batch failed. */
+    websitesEarlyExit: boolean;
+    /** Which measurement set produced the latency/throughput numbers below. */
+    performanceSource: PerformanceSource;
+    /** Latency of egress verification endpoints, kept separate from web performance. */
+    egressVerificationLatencyMs: number;
     avgLatencyMs: number;
     minLatencyMs: number;
     maxLatencyMs: number;
@@ -123,16 +145,25 @@ export interface BenchmarkRunResult {
 }
 
 export interface AppConfig {
+    /** Stage 2 egress-verification workers. */
     concurrency: number;
     tcpConcurrency: number;
+    /** Stage 3 proxy workers running website batches. */
+    websiteWorkers: number;
+    /** Website probes per proxy, per batch. */
+    websiteConcurrency: number;
+    /** Hard ceiling on concurrent curl child processes across all stages. */
+    maxCurlProcesses: number;
     tcpTimeoutMs: number;
     timeoutSeconds: number;
     connectTimeoutSeconds: number;
     websiteTimeoutSeconds: number;
     websiteConnectTimeoutSeconds: number;
-    websiteConcurrency: number;
+    /** false = permissive transport probe (curl --insecure), true = strict TLS. */
+    tlsVerify: boolean;
     cloudflareDns: string;
     endpointRetries: number;
+    /** 0 = unlimited candidates. */
     limit: number;
     fullBenchmark: boolean;
     benchmarkTopWebsites: boolean;

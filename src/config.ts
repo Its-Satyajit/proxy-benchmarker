@@ -1,63 +1,21 @@
 import process from "node:process";
-import type { AppConfig, CandidateFeed, TestEndpoint } from "./types.js";
-import { TOP_50_WEBSITES } from "./websites.js";
+import type { AppConfig, CandidateFeed, PresetName, TestEndpoint } from "./types.js";
+import { BENCHMARK_WEBSITES } from "./websites.js";
+import {
+    DEFAULT_PRESET,
+    PRESET_LIMITS,
+    candidateLimit,
+    envBoolean,
+    envCandidateLimit,
+    envInt,
+    envSeconds,
+    parsePresetName,
+    positiveInt,
+    positiveSeconds,
+    resolveCurlCap,
+    resolveWorkerCount
+} from "./limits.js";
 
-export type PresetMode = "home" | "safe" | "turbo";
-
-const envPreset = (process.env.PRESET || (process.env.TURBO === "true" || process.env.TURBO === "1" ? "turbo" : (process.env.SAFE === "true" || process.env.SAFE === "1" ? "safe" : "home"))).toLowerCase() as PresetMode;
-
-const PRESET_DEFAULTS: Record<PresetMode, {
-    tcpConcurrency: number;
-    concurrency: number;
-    websiteConcurrency: number;
-    tcpTimeoutMs: number;
-    timeoutSeconds: number;
-    connectTimeoutSeconds: number;
-    websiteTimeoutSeconds: number;
-    websiteConnectTimeoutSeconds: number;
-}> = {
-    home: {
-        tcpConcurrency: 80,
-        concurrency: 25,
-        websiteConcurrency: 5,
-        tcpTimeoutMs: 1200,
-        timeoutSeconds: 4.0,
-        connectTimeoutSeconds: 3.0,
-        websiteTimeoutSeconds: 4.5,
-        websiteConnectTimeoutSeconds: 3.0,
-    },
-    safe: {
-        tcpConcurrency: 35,
-        concurrency: 12,
-        websiteConcurrency: 3,
-        tcpTimeoutMs: 1500,
-        timeoutSeconds: 4.5,
-        connectTimeoutSeconds: 3.0,
-        websiteTimeoutSeconds: 5.0,
-        websiteConnectTimeoutSeconds: 3.5,
-    },
-    turbo: {
-        tcpConcurrency: 1500,
-        concurrency: 300,
-        websiteConcurrency: 25,
-        tcpTimeoutMs: 800,
-        timeoutSeconds: 3.0,
-        connectTimeoutSeconds: 2.0,
-        websiteTimeoutSeconds: 3.5,
-        websiteConnectTimeoutSeconds: 2.5,
-    },
-};
-
-const activePreset = PRESET_DEFAULTS[envPreset] ?? PRESET_DEFAULTS.home;
-
-const DEFAULT_CONCURRENCY = activePreset.concurrency;
-const DEFAULT_TCP_CONCURRENCY = activePreset.tcpConcurrency;
-const DEFAULT_WEBSITE_CONCURRENCY = activePreset.websiteConcurrency;
-const DEFAULT_TCP_TIMEOUT_MS = activePreset.tcpTimeoutMs;
-const DEFAULT_TIMEOUT_SECONDS = activePreset.timeoutSeconds;
-const DEFAULT_CONNECT_TIMEOUT_SECONDS = activePreset.connectTimeoutSeconds;
-const DEFAULT_WEBSITE_TIMEOUT_SECONDS = activePreset.websiteTimeoutSeconds;
-const DEFAULT_WEBSITE_CONNECT_TIMEOUT_SECONDS = activePreset.websiteConnectTimeoutSeconds;
 const DEFAULT_CLOUDFLARE_DNS = "1.1.1.1";
 const DEFAULT_ENDPOINT_RETRIES = 2;
 
@@ -152,33 +110,97 @@ export const TEST_ENDPOINTS: TestEndpoint[] = [
     { name: "myexternalip.com", url: "https://myexternalip.com/raw", parser: "plain" },
 ];
 
-export const CONFIG: AppConfig = {
-    concurrency: Number.parseInt(process.env.CONCURRENCY || String(DEFAULT_CONCURRENCY), 10),
-    tcpConcurrency: Number.parseInt(process.env.TCP_CONCURRENCY || String(DEFAULT_TCP_CONCURRENCY), 10),
-    tcpTimeoutMs: Number.parseInt(process.env.TCP_TIMEOUT || String(DEFAULT_TCP_TIMEOUT_MS), 10),
-    timeoutSeconds: Number.parseFloat(process.env.TIMEOUT || String(DEFAULT_TIMEOUT_SECONDS)),
-    connectTimeoutSeconds: Number.parseFloat(process.env.CONNECT_TIMEOUT || String(DEFAULT_CONNECT_TIMEOUT_SECONDS)),
-    websiteTimeoutSeconds: Number.parseFloat(process.env.WEBSITE_TIMEOUT || String(DEFAULT_WEBSITE_TIMEOUT_SECONDS)),
-    websiteConnectTimeoutSeconds: Number.parseFloat(process.env.WEBSITE_CONNECT_TIMEOUT || String(DEFAULT_WEBSITE_CONNECT_TIMEOUT_SECONDS)),
-    websiteConcurrency: Number.parseInt(process.env.WEBSITE_CONCURRENCY || String(DEFAULT_WEBSITE_CONCURRENCY), 10),
-    cloudflareDns: process.env.DNS || DEFAULT_CLOUDFLARE_DNS,
-    endpointRetries: Number.parseInt(process.env.DNS_RETRIES || String(DEFAULT_ENDPOINT_RETRIES), 10),
-    limit: Number.parseInt(process.env.LIMIT || "0", 10),
-    fullBenchmark: process.env.FULL_BENCHMARK === "true",
-    benchmarkTopWebsites: process.env.BENCHMARK_WEBSITES !== "false",
-    feeds: CANDIDATE_FEEDS,
-    csvUrls: CANDIDATE_FEEDS[0].urls,
-    testEndpoints: TEST_ENDPOINTS,
-    topWebsites: TOP_50_WEBSITES,
-    outputDir: process.cwd(),
-    outputFiles: {
-        http: "http.txt",
-        https: "https.txt",
-        socks4: "socks4.txt",
-        socks5: "socks5.txt",
-    },
-    reportFiles: {
-        html: "benchmark-report.html",
-        json: "benchmark-report.json",
-    },
-};
+export interface ConfigOverrides {
+    concurrency?: number;
+    tcpConcurrency?: number;
+    websiteWorkers?: number;
+    websiteConcurrency?: number;
+    maxCurlProcesses?: number;
+    limit?: number;
+    tlsVerify?: boolean;
+}
+
+export function presetFromEnv(env: NodeJS.ProcessEnv): PresetName {
+    const explicit = env.PRESET;
+    if (explicit !== undefined && explicit.trim() !== "") {
+        return parsePresetName(explicit, "environment PRESET");
+    }
+    if (envBoolean(env, "TURBO", false)) return "turbo";
+    if (envBoolean(env, "SAFE", false)) return "safe";
+    return DEFAULT_PRESET;
+}
+
+function applyOverrides(config: AppConfig, overrides: ConfigOverrides): void {
+    if (overrides.concurrency !== undefined) config.concurrency = overrides.concurrency;
+    if (overrides.tcpConcurrency !== undefined) config.tcpConcurrency = overrides.tcpConcurrency;
+    if (overrides.websiteWorkers !== undefined) config.websiteWorkers = overrides.websiteWorkers;
+    if (overrides.websiteConcurrency !== undefined) config.websiteConcurrency = overrides.websiteConcurrency;
+    if (overrides.maxCurlProcesses !== undefined) config.maxCurlProcesses = overrides.maxCurlProcesses;
+    if (overrides.limit !== undefined) config.limit = overrides.limit;
+    if (overrides.tlsVerify !== undefined) config.tlsVerify = overrides.tlsVerify;
+}
+
+/** Fails fast on any out-of-range value so no stage has to clamp silently. */
+export function validateConfig(config: AppConfig): AppConfig {
+    positiveInt(config.concurrency, "concurrency");
+    positiveInt(config.tcpConcurrency, "tcpConcurrency");
+    positiveInt(config.websiteWorkers, "websiteWorkers");
+    positiveInt(config.websiteConcurrency, "websiteConcurrency");
+    resolveCurlCap(config.maxCurlProcesses);
+    positiveInt(config.tcpTimeoutMs, "tcpTimeoutMs");
+    positiveSeconds(config.timeoutSeconds, "timeoutSeconds");
+    positiveSeconds(config.connectTimeoutSeconds, "connectTimeoutSeconds");
+    positiveSeconds(config.websiteTimeoutSeconds, "websiteTimeoutSeconds");
+    positiveSeconds(config.websiteConnectTimeoutSeconds, "websiteConnectTimeoutSeconds");
+    positiveInt(config.endpointRetries, "endpointRetries");
+    candidateLimit(config.limit);
+    return config;
+}
+
+/** Resolution order: preset defaults -> environment -> explicit CLI overrides. */
+export function createConfig(
+    preset: PresetName,
+    env: NodeJS.ProcessEnv = {},
+    overrides: ConfigOverrides = {}
+): AppConfig {
+    const limits = PRESET_LIMITS[preset];
+    const config: AppConfig = {
+        concurrency: envInt(env, "CONCURRENCY", limits.verificationWorkers),
+        tcpConcurrency: envInt(env, "TCP_CONCURRENCY", limits.tcpConcurrency),
+        websiteWorkers: envInt(env, "WEBSITE_WORKERS", limits.websiteWorkers),
+        websiteConcurrency: envInt(env, "WEBSITE_CONCURRENCY", limits.websiteRequestsPerProxy),
+        maxCurlProcesses: resolveCurlCap(envInt(env, "MAX_CURL_PROCESSES", limits.maxCurlProcesses, 100_000)),
+        tcpTimeoutMs: envInt(env, "TCP_TIMEOUT", limits.tcpTimeoutMs),
+        timeoutSeconds: envSeconds(env, "TIMEOUT", limits.timeoutSeconds),
+        connectTimeoutSeconds: envSeconds(env, "CONNECT_TIMEOUT", limits.connectTimeoutSeconds),
+        websiteTimeoutSeconds: envSeconds(env, "WEBSITE_TIMEOUT", limits.websiteTimeoutSeconds),
+        websiteConnectTimeoutSeconds: envSeconds(env, "WEBSITE_CONNECT_TIMEOUT", limits.websiteConnectTimeoutSeconds),
+        tlsVerify: envBoolean(env, "TLS_VERIFY", false),
+        cloudflareDns: env.DNS?.trim() || DEFAULT_CLOUDFLARE_DNS,
+        endpointRetries: envInt(env, "DNS_RETRIES", DEFAULT_ENDPOINT_RETRIES),
+        limit: envCandidateLimit(env, "LIMIT", limits.candidateLimit),
+        fullBenchmark: envBoolean(env, "FULL_BENCHMARK", false),
+        benchmarkTopWebsites: envBoolean(env, "BENCHMARK_WEBSITES", true),
+        feeds: CANDIDATE_FEEDS,
+        csvUrls: CANDIDATE_FEEDS[0].urls,
+        testEndpoints: TEST_ENDPOINTS,
+        topWebsites: BENCHMARK_WEBSITES,
+        outputDir: process.cwd(),
+        outputFiles: {
+            http: "http.txt",
+            https: "https.txt",
+            socks4: "socks4.txt",
+            socks5: "socks5.txt",
+        },
+        reportFiles: {
+            html: "benchmark-report.html",
+            json: "benchmark-report.json",
+        },
+    };
+    applyOverrides(config, overrides);
+    return validateConfig(config);
+}
+
+export const CONFIG: AppConfig = createConfig(presetFromEnv(process.env), process.env);
+
+export { resolveWorkerCount };

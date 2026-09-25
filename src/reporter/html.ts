@@ -78,35 +78,31 @@ export function generateHtmlReport(
                 <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 6px;">${SVG_ICONS.settings} Ranking Weights</h3>
                 <button class="btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="resetDefaultWeights()">Reset Defaults</button>
             </div>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Recalculate composite rankings in real time.</p>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Recalculate composite rankings in real time. Defaults match the server-side score.</p>
             <div class="weights-grid">
                 <div class="weight-item">
-                    <div class="weight-header"><span>${SVG_ICONS.globe} Top 50 Sites</span><span id="w-val-websites">30%</span></div>
-                    <input type="range" class="weight-slider" id="w-websites" min="0" max="50" value="30" oninput="updateWeights()">
+                    <div class="weight-header"><span>${SVG_ICONS.globe} Website Reachability</span><span id="w-val-websites">50%</span></div>
+                    <input type="range" class="weight-slider" id="w-websites" min="0" max="50" value="50" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
                     <div class="weight-header"><span>${SVG_ICONS.bolt} Avg Latency</span><span id="w-val-avgLatency">20%</span></div>
-                    <input type="range" class="weight-slider" id="w-avgLatency" min="0" max="50" value="20" oninput="updateWeights()">
+                    <input type="range" class="weight-slider" id="w-avgLatency" min="0" max="20" value="20" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>${SVG_ICONS.rocket} Min Latency</span><span id="w-val-minLatency">10%</span></div>
-                    <input type="range" class="weight-slider" id="w-minLatency" min="0" max="30" value="10" oninput="updateWeights()">
+                    <div class="weight-header"><span>${SVG_ICONS.rocket} Min Latency</span><span id="w-val-minLatency">8%</span></div>
+                    <input type="range" class="weight-slider" id="w-minLatency" min="0" max="8" value="8" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>${SVG_ICONS.plug} Connect Time</span><span id="w-val-connectTime">10%</span></div>
-                    <input type="range" class="weight-slider" id="w-connectTime" min="0" max="30" value="10" oninput="updateWeights()">
+                    <div class="weight-header"><span>${SVG_ICONS.plug} Connect Time</span><span id="w-val-connectTime">8%</span></div>
+                    <input type="range" class="weight-slider" id="w-connectTime" min="0" max="8" value="8" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>${SVG_ICONS.clock} TTFB</span><span id="w-val-ttfb">10%</span></div>
-                    <input type="range" class="weight-slider" id="w-ttfb" min="0" max="30" value="10" oninput="updateWeights()">
+                    <div class="weight-header"><span>${SVG_ICONS.clock} TTFB</span><span id="w-val-ttfb">7%</span></div>
+                    <input type="range" class="weight-slider" id="w-ttfb" min="0" max="7" value="7" oninput="updateWeights()">
                 </div>
                 <div class="weight-item">
-                    <div class="weight-header"><span>${SVG_ICONS.gauge} Bandwidth</span><span id="w-val-speed">10%</span></div>
-                    <input type="range" class="weight-slider" id="w-speed" min="0" max="30" value="10" oninput="updateWeights()">
-                </div>
-                <div class="weight-item">
-                    <div class="weight-header"><span>${SVG_ICONS.shield} Anonymity</span><span id="w-val-anonymity">10%</span></div>
-                    <input type="range" class="weight-slider" id="w-anonymity" min="0" max="30" value="10" oninput="updateWeights()">
+                    <div class="weight-header"><span>${SVG_ICONS.gauge} Bandwidth</span><span id="w-val-speed">7%</span></div>
+                    <input type="range" class="weight-slider" id="w-speed" min="0" max="7" value="7" oninput="updateWeights()">
                 </div>
             </div>
         </div>
@@ -117,7 +113,7 @@ export function generateHtmlReport(
                 <div class="telemetry-lead-badge font-mono">${SVG_ICONS.trophy} OPTIMAL ROUTE</div>
                 <div class="telemetry-lead-addr font-mono" id="hero-proxy-url">${bestProxy ? `${bestProxy.proxy.protocol.toUpperCase()}://${bestProxy.proxy.ip}:${bestProxy.proxy.port}` : 'No working route found'}</div>
                 <div class="telemetry-lead-meta" id="hero-proxy-meta">
-                    ${bestProxy ? `<span>${bestProxy.proxy.country || 'Global'}</span> &bull; <span>${bestProxy.anonymity}</span> &bull; <span>${bestProxy.websitesPassed}/${bestProxy.websitesTotal} Targets (${bestProxy.websitePassRatePercent}%)</span>` : '<span style="color: var(--danger);">No proxies passed verification</span>'}
+                    ${bestProxy ? `<span>${bestProxy.proxy.country || 'Global'}</span> &bull; <span>${bestProxy.egressStatus}</span> &bull; <span>${bestProxy.websitesPassed}/${bestProxy.websitesAttempted} targets probed (${bestProxy.websitesPassed}/${bestProxy.websitesAvailable} reachable)</span>` : '<span style="color: var(--danger);">No proxies passed verification</span>'}
                 </div>
                 <div class="telemetry-lead-metrics">
                     <div class="metric-item">
@@ -164,7 +160,7 @@ export function generateHtmlReport(
                         <span>S4:${protocolCounts.socks4.passed}</span>
                         <span>S5:${protocolCounts.socks5.passed}</span>
                     </div>
-                    <span class="metric-sub">${CONFIG.topWebsites?.length || 50} edge targets</span>
+                    <span class="metric-sub">${CONFIG.topWebsites.length} edge targets</span>
                 </div>
             </div>
         </div>
@@ -227,8 +223,8 @@ export function generateHtmlReport(
                         <th data-sort="protocol">Proto</th>
                         <th data-sort="country">Country</th>
                         <th data-sort="status">Status</th>
-                        <th data-sort="anonymity">Anonymity</th>
-                        <th data-sort="websites">Top 50 Sites</th>
+                        <th data-sort="egress">Egress IP</th>
+                        <th data-sort="websites">Websites</th>
                         <th data-sort="avgLatency">Avg Latency</th>
                         <th data-sort="minLatency">Min</th>
                         <th data-sort="connectTime">Connect</th>

@@ -33,6 +33,15 @@ export async function writeProxyFiles(
 export async function writeJsonReport(
     reportData: {
         generatedAt: string;
+        run: {
+            preset: string;
+            tlsVerification: "strict" | "permissive";
+            maxCurlProcesses: number;
+            tcpConcurrency: number;
+            verificationWorkers: number;
+            websiteWorkers: number;
+            websiteConcurrency: number;
+        };
         stats: BenchmarkStats;
         endpoints: TestEndpoint[];
         benchmarks: BenchmarkItem[];
@@ -65,7 +74,9 @@ export function printSummary(
     log("");
     log(`  Local Network IP: ${stats.localPublicIp || 'Direct'}`);
     log(`  Verification    : Hard-failed if 0/${enabledEndpointCount} connected`);
-    log(`  Top Websites    : ${CONFIG.topWebsites?.length || 50} websites benchmarked`);
+    log(`  Website Targets : ${CONFIG.topWebsites.length} available (early exit recorded per proxy)`);
+    log(`  Global Curl Cap : ${CONFIG.maxCurlProcesses}`);
+    log(`  TLS Mode        : ${CONFIG.tlsVerify ? "strict" : "permissive"}`);
     log(`  Total tested    : ${stats.total.toLocaleString()}`);
     log(`  Passed / Alive  : ${stats.passed.toLocaleString()}`);
     log(`  Hard Failed     : ${stats.failed.toLocaleString()} (excluded from report)`);

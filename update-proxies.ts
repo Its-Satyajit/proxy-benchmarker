@@ -3,8 +3,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import type { Protocol, ProxyItem } from "./src/types.js";
-import { CONFIG } from "./src/config.js";
+import type { PresetName, Protocol, ProxyItem } from "./src/types.js";
+import { CONFIG, createConfig, presetFromEnv } from "./src/config.js";
+import { candidateLimit, parsePresetName, positiveInt } from "./src/limits.js";
 import { log, ansi } from "./src/terminal.js";
 import { checkDependencies, prepareEndpoints, prepareWebsiteTargets, getLocalPublicIp } from "./src/dns.js";
 import { downloadAllFeeds, parseCsv } from "./src/csv.js";
@@ -18,71 +19,99 @@ import {
     printSummary
 } from "./src/reporter.js";
 
-async function parseCliArgs(rawArgs: string[]): Promise<{
+interface CliOptions {
     customProxies: ProxyItem[];
     limit?: number;
     concurrency?: number;
     tcpConcurrency?: number;
-    preset?: "home" | "safe" | "turbo";
+    websiteWorkers?: number;
+    websiteConcurrency?: number;
+    maxCurlProcesses?: number;
+    preset?: PresetName;
+    strictTls?: boolean;
     showHelp?: boolean;
-}> {
+}
+
+/** Rejects NaN/0/negative input up front instead of letting a stage clamp it. */
+function requireInt(raw: string | undefined, flag: string, allowZero = false): number {
+    if (raw === undefined || raw.trim() === "") {
+        throw new Error(`${flag} requires a value`);
+    }
+    const value = Number(raw.trim());
+    if (!Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
+        throw new Error(`${flag} must be an integer >= ${allowZero ? 0 : 1} (got "${raw}")`);
+    }
+    return value;
+}
+
+async function parseCliArgs(rawArgs: string[]): Promise<CliOptions> {
     const customProxies: ProxyItem[] = [];
-    let limit: number | undefined;
-    let concurrency: number | undefined;
-    let tcpConcurrency: number | undefined;
-    let preset: "home" | "safe" | "turbo" | undefined;
-    let showHelp = false;
+    const options: CliOptions = { customProxies, showHelp: false };
 
     for (let i = 0; i < rawArgs.length; i++) {
         const arg = rawArgs[i];
         if (arg === "-h" || arg === "--help") {
-            showHelp = true;
+            options.showHelp = true;
             continue;
         }
         if (arg === "-n" || arg === "--limit") {
-            const next = rawArgs[++i];
-            if (next) limit = Number.parseInt(next, 10);
+            options.limit = candidateLimit(requireInt(rawArgs[++i], "--limit", true), "--limit");
             continue;
         }
         if (arg.startsWith("--limit=")) {
-            limit = Number.parseInt(arg.split("=")[1], 10);
+            options.limit = candidateLimit(requireInt(arg.split("=")[1], "--limit", true), "--limit");
             continue;
         }
         if (arg === "-c" || arg === "--concurrency") {
-            const next = rawArgs[++i];
-            if (next) concurrency = Number.parseInt(next, 10);
+            options.concurrency = positiveInt(requireInt(rawArgs[++i], "--concurrency"), "--concurrency");
             continue;
         }
         if (arg.startsWith("--concurrency=")) {
-            concurrency = Number.parseInt(arg.split("=")[1], 10);
+            options.concurrency = positiveInt(requireInt(arg.split("=")[1], "--concurrency"), "--concurrency");
             continue;
         }
         if (arg === "--tcp-concurrency") {
-            const next = rawArgs[++i];
-            if (next) tcpConcurrency = Number.parseInt(next, 10);
+            options.tcpConcurrency = positiveInt(requireInt(rawArgs[++i], "--tcp-concurrency"), "--tcp-concurrency");
             continue;
         }
         if (arg.startsWith("--tcp-concurrency=")) {
-            tcpConcurrency = Number.parseInt(arg.split("=")[1], 10);
+            options.tcpConcurrency = positiveInt(requireInt(arg.split("=")[1], "--tcp-concurrency"), "--tcp-concurrency");
+            continue;
+        }
+        if (arg === "--website-workers") {
+            options.websiteWorkers = positiveInt(requireInt(rawArgs[++i], "--website-workers"), "--website-workers");
+            continue;
+        }
+        if (arg.startsWith("--website-workers=")) {
+            options.websiteWorkers = positiveInt(requireInt(arg.split("=")[1], "--website-workers"), "--website-workers");
+            continue;
+        }
+        if (arg === "--max-curl") {
+            options.maxCurlProcesses = positiveInt(requireInt(rawArgs[++i], "--max-curl"), "--max-curl");
+            continue;
+        }
+        if (arg.startsWith("--max-curl=")) {
+            options.maxCurlProcesses = positiveInt(requireInt(arg.split("=")[1], "--max-curl"), "--max-curl");
+            continue;
+        }
+        if (arg === "--strict-tls") {
+            options.strictTls = true;
             continue;
         }
         if (arg === "--safe") {
-            preset = "safe";
+            options.preset = "safe";
             continue;
         }
         if (arg === "--home") {
-            preset = "home";
+            options.preset = "home";
             continue;
         }
         if (arg === "--turbo" || arg === "--vps") {
-            preset = "turbo";
+            options.preset = "turbo";
             continue;
         }
         if (arg.startsWith("--preset=")) {
-            const val = arg.split("=")[1].toLowerCase();
-            if (val === "safe" || val === "home" || val === "turbo") {
-                preset = val;
-            }
+            options.preset = parsePresetName(arg.split("=")[1], "--preset");
             continue;
         }
         if (arg.startsWith("-")) {
@@ -108,7 +137,7 @@ async function parseCliArgs(rawArgs: string[]): Promise<{
         }
     }
 
-    return { customProxies, limit, concurrency, tcpConcurrency, preset, showHelp };
+    return options;
 }
 
 function printHelp(): void {
@@ -121,8 +150,11 @@ Usage:
   irm https://.../run.ps1 | iex [options] [proxy...]
 
 Examples:
-  # Benchmark with safe home-router defaults (balanced)
+  # Benchmark with the default safe preset
   nub update-proxies.ts
+
+  # Benchmark with home-router defaults (larger run)
+  nub update-proxies.ts --home
 
   # Benchmark with ultra-gentle mode for sensitive/budget WiFi routers
   nub update-proxies.ts --safe
@@ -137,12 +169,15 @@ Examples:
   nub update-proxies.ts my-proxies.txt
 
 Options:
-  --safe              Ultra-safe profile (35 TCP sockets, 12 workers) for budget routers
-  --home              Home router profile (80 TCP sockets, 25 workers - default)
-  --turbo, --vps      High-performance profile (1,500 TCP sockets, 300 workers)
-  -c, --concurrency   Override parallel worker count
-  --tcp-concurrency   Override parallel TCP socket pre-filter count
-  -n, --limit <num>   Limit the number of proxies to test
+  --safe              Gentle profile (500 candidates, 35 TCP sockets, 12 verification workers, 4 website workers, 16 global curl) - default
+  --home              Home profile (2,000 candidates, 80 TCP sockets, 25 verification workers, 8 website workers, 64 global curl)
+  --turbo, --vps      High-performance profile (1,500 TCP sockets, 300 verification workers, 100 website workers, 1,500 global curl)
+  -c, --concurrency   Override Stage 2 verification worker count
+  --tcp-concurrency   Override Stage 1 parallel TCP socket count
+  --website-workers   Override Stage 3 proxy worker count
+  --max-curl          Global ceiling on concurrent curl processes
+  -n, --limit <num>   Candidate cap (0 = unlimited)
+  --strict-tls        Verify TLS certificates instead of permissive transport probing
   -h, --help          Show this help message
 `);
 }
@@ -152,51 +187,41 @@ Options:
  * ============================================================ */
 
 async function main(): Promise<void> {
-    const { customProxies, limit, concurrency, tcpConcurrency, preset, showHelp } = await parseCliArgs(process.argv.slice(2));
+    const options = await parseCliArgs(process.argv.slice(2));
 
-    if (showHelp) {
+    if (options.showHelp) {
         printHelp();
         process.exit(0);
     }
 
-    if (preset === "safe") {
-        CONFIG.tcpConcurrency = 35;
-        CONFIG.concurrency = 12;
-        CONFIG.websiteConcurrency = 3;
-        CONFIG.tcpTimeoutMs = 1500;
-        CONFIG.timeoutSeconds = 4.5;
-        CONFIG.connectTimeoutSeconds = 3.0;
-        CONFIG.websiteTimeoutSeconds = 5.0;
-        CONFIG.websiteConnectTimeoutSeconds = 3.5;
-    } else if (preset === "home") {
-        CONFIG.tcpConcurrency = 80;
-        CONFIG.concurrency = 25;
-        CONFIG.websiteConcurrency = 5;
-        CONFIG.tcpTimeoutMs = 1200;
-        CONFIG.timeoutSeconds = 4.0;
-        CONFIG.connectTimeoutSeconds = 3.0;
-        CONFIG.websiteTimeoutSeconds = 4.5;
-        CONFIG.websiteConnectTimeoutSeconds = 3.0;
-    } else if (preset === "turbo") {
-        CONFIG.tcpConcurrency = 1500;
-        CONFIG.concurrency = 300;
-        CONFIG.websiteConcurrency = 25;
-        CONFIG.tcpTimeoutMs = 800;
-        CONFIG.timeoutSeconds = 3.0;
-        CONFIG.connectTimeoutSeconds = 2.0;
-        CONFIG.websiteTimeoutSeconds = 3.5;
-        CONFIG.websiteConnectTimeoutSeconds = 2.5;
-    }
+    // Single resolution point: preset defaults -> environment -> CLI overrides.
+    const resolved = createConfig(options.preset ?? presetFromEnv(process.env), process.env, {
+        concurrency: options.concurrency,
+        tcpConcurrency: options.tcpConcurrency,
+        websiteWorkers: options.websiteWorkers,
+        websiteConcurrency: options.websiteConcurrency,
+        maxCurlProcesses: options.maxCurlProcesses,
+        limit: options.limit,
+        tlsVerify: options.strictTls,
+    });
+    Object.assign(CONFIG, resolved);
 
-    if (concurrency !== undefined) CONFIG.concurrency = concurrency;
-    if (tcpConcurrency !== undefined) CONFIG.tcpConcurrency = tcpConcurrency;
-
-    const effectiveLimit = limit !== undefined ? limit : CONFIG.limit;
+    const effectiveLimit = CONFIG.limit;
 
     log("");
     log("========================================");
     log("   Proxy Benchmark & Best Network Finder ");
     log("========================================");
+    log("");
+    log("Benchmark limits");
+    log("──────────────────────────────────────────");
+    log(`  Preset             ${options.preset ?? presetFromEnv(process.env)}`);
+    log(`  Candidate cap      ${effectiveLimit === 0 ? "unlimited" : effectiveLimit.toLocaleString()}`);
+    log(`  TCP connections    ${CONFIG.tcpConcurrency}`);
+    log(`  Verification       ${CONFIG.concurrency}`);
+    log(`  Website workers    ${CONFIG.websiteWorkers} x ${CONFIG.websiteConcurrency} probes`);
+    log(`  Global curl cap    ${CONFIG.maxCurlProcesses}`);
+    log(`  TLS verification   ${CONFIG.tlsVerify ? "strict" : "permissive (--insecure)"}`);
     log("");
 
     // 1. Dependency Checks & Network Context
@@ -208,11 +233,9 @@ async function main(): Promise<void> {
 
     log(
         `${ansi.gray}` +
-        `TCP Sockets: ${CONFIG.tcpConcurrency} | ` +
-        `Workers: ${CONFIG.concurrency} | ` +
         `Timeout: ${CONFIG.timeoutSeconds}s | ` +
         `DNS: ${CONFIG.cloudflareDns} | ` +
-        `Edge Targets: ${CONFIG.benchmarkTopWebsites ? `${CONFIG.topWebsites?.length || 50} sites` : "Disabled"}` +
+        `Edge Targets: ${CONFIG.benchmarkTopWebsites ? `${CONFIG.topWebsites.length} sites` : "Disabled"}` +
         `${ansi.reset}\n`
     );
 
@@ -224,13 +247,13 @@ async function main(): Promise<void> {
 
     let proxies: ProxyItem[] = [];
 
-    if (customProxies.length > 0) {
+    if (options.customProxies.length > 0) {
         // Use custom CLI endpoints
         log("========================================");
         log("     Target Endpoints (CLI Input)       ");
         log("========================================");
         log("");
-        proxies = deduplicateProxies(customProxies);
+        proxies = deduplicateProxies(options.customProxies);
         log(`Loaded ${proxies.length} custom route(s) to benchmark:`);
         for (const p of proxies) {
             log(`  ${ansi.cyan}${p.protocol.toUpperCase()}${ansi.reset}://${p.ip}:${p.port}`);
@@ -276,9 +299,9 @@ async function main(): Promise<void> {
     log("========================================");
     log("");
     log(`Stage 1: Async TCP Socket Pre-Filter (${Math.min(CONFIG.tcpConcurrency, proxies.length)} parallel sockets)`);
-    log(`Stage 2: Transport Handshake & Egress Verification (${endpoints.length} verification endpoints)`);
+    log(`Stage 2: Transport Handshake & Egress Verification (${endpoints.length} verification endpoints, ${CONFIG.concurrency} workers)`);
     if (CONFIG.benchmarkTopWebsites) {
-        log(`Stage 3: Global Edge Reachability Benchmark (${CONFIG.topWebsites?.length || 50} destinations)`);
+        log(`Stage 3: Global Edge Reachability Benchmark (${CONFIG.topWebsites.length} destinations, ${CONFIG.websiteWorkers} workers)`);
     }
     log("Stage 4: Composite Route Scoring & Telemetry Generation\n");
 
@@ -302,6 +325,15 @@ async function main(): Promise<void> {
     const jsonReportPath = path.join(CONFIG.outputDir, CONFIG.reportFiles.json);
     await writeJsonReport({
         generatedAt: stats.completedAt,
+        run: {
+            preset: options.preset ?? presetFromEnv(process.env),
+            tlsVerification: CONFIG.tlsVerify ? "strict" : "permissive",
+            maxCurlProcesses: CONFIG.maxCurlProcesses,
+            tcpConcurrency: CONFIG.tcpConcurrency,
+            verificationWorkers: CONFIG.concurrency,
+            websiteWorkers: CONFIG.websiteWorkers,
+            websiteConcurrency: CONFIG.websiteConcurrency,
+        },
         stats,
         endpoints,
         benchmarks,

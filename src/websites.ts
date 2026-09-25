@@ -1,6 +1,6 @@
 import type { WebsiteTarget } from "./types.js";
 
-export const TOP_50_WEBSITES: WebsiteTarget[] = [
+export const BENCHMARK_WEBSITES: WebsiteTarget[] = [
     // 1. Search, DNS & Core Infrastructure
     { name: "Google", domain: "google.com", category: "Search / Infra", url: "https://www.google.com/generate_204" },
     { name: "Cloudflare", domain: "cloudflare.com", category: "CDN / Infra", url: "https://www.cloudflare.com/favicon.ico" },

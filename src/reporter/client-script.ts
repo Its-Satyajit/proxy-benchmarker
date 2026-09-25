@@ -19,15 +19,14 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
         let totalContentHeight = 0;
         let isScrollPending = false;
 
-        // Active Scoring Weights (Sum = 100)
+        // Active Scoring Weights (defaults mirror the server-side composite score)
         let weights = {
-            websites: 30,
+            websites: 50,
             avgLatency: 20,
-            minLatency: 10,
-            connectTime: 10,
-            ttfb: 10,
-            speed: 10,
-            anonymity: 10,
+            minLatency: 8,
+            connectTime: 8,
+            ttfb: 7,
+            speed: 7,
         };
 
         function toggleWeightsPanel() {
@@ -36,14 +35,13 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
         }
 
         function resetDefaultWeights() {
-            weights = { websites: 30, avgLatency: 20, minLatency: 10, connectTime: 10, ttfb: 10, speed: 10, anonymity: 10 };
-            document.getElementById('w-websites').value = 30;
+            weights = { websites: 50, avgLatency: 20, minLatency: 8, connectTime: 8, ttfb: 7, speed: 7 };
+            document.getElementById('w-websites').value = 50;
             document.getElementById('w-avgLatency').value = 20;
-            document.getElementById('w-minLatency').value = 10;
-            document.getElementById('w-connectTime').value = 10;
-            document.getElementById('w-ttfb').value = 10;
-            document.getElementById('w-speed').value = 10;
-            document.getElementById('w-anonymity').value = 10;
+            document.getElementById('w-minLatency').value = 8;
+            document.getElementById('w-connectTime').value = 8;
+            document.getElementById('w-ttfb').value = 7;
+            document.getElementById('w-speed').value = 7;
             updateWeightLabels();
             recalculateAllScores();
         }
@@ -55,7 +53,6 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
             weights.connectTime = parseInt(document.getElementById('w-connectTime').value, 10);
             weights.ttfb = parseInt(document.getElementById('w-ttfb').value, 10);
             weights.speed = parseInt(document.getElementById('w-speed').value, 10);
-            weights.anonymity = parseInt(document.getElementById('w-anonymity').value, 10);
             updateWeightLabels();
             recalculateAllScores();
         }
@@ -67,35 +64,45 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
             document.getElementById('w-val-connectTime').textContent = weights.connectTime + '%';
             document.getElementById('w-val-ttfb').textContent = weights.ttfb + '%';
             document.getElementById('w-val-speed').textContent = weights.speed + '%';
-            document.getElementById('w-val-anonymity').textContent = weights.anonymity + '%';
+        }
+
+        // Maximum points per component, identical to SCORE_WEIGHTS in src/metrics.ts
+        const SCORE_MAX = { websites: 50, avgLatency: 20, minLatency: 8, connectTime: 8, ttfb: 7, speed: 7 };
+
+        function rawScoreComponents(item) {
+            const usable = item.websitesAvailable > 0 ? (item.websitesPassed / item.websitesAvailable) : 1;
+            const ratio = Math.max(0, Math.min(1, usable));
+            const clamp = (value, max) => Math.max(0, Math.min(max, value));
+
+            // Performance components are gated by website reachability, exactly
+            // like scoreCandidate() in src/metrics.ts.
+            return {
+                websites: ratio * SCORE_MAX.websites,
+                avgLatency: clamp(SCORE_MAX.avgLatency * (1 - (item.avgLatencyMs / 2500)), SCORE_MAX.avgLatency) * ratio,
+                minLatency: clamp(SCORE_MAX.minLatency * (1 - (item.minLatencyMs / 1500)), SCORE_MAX.minLatency) * ratio,
+                connectTime: clamp(SCORE_MAX.connectTime * (1 - (item.avgConnectTimeMs / 800)), SCORE_MAX.connectTime) * ratio,
+                ttfb: clamp(SCORE_MAX.ttfb * (1 - (item.avgTtfbMs / 1500)), SCORE_MAX.ttfb) * ratio,
+                speed: clamp((item.avgSpeedBps / (500 * 1024)) * SCORE_MAX.speed, SCORE_MAX.speed) * ratio
+            };
         }
 
         function computeWeightedScore(item) {
-            const usabilityRatio = item.websitesTotal > 0 ? (item.websitesPassed / item.websitesTotal) : 1;
-            const wScore = usabilityRatio * 50;
+            const raw = rawScoreComponents(item);
+            const weightTotal = Object.keys(SCORE_MAX).reduce((sum, key) => sum + (weights[key] || 0), 0);
+            if (weightTotal <= 0) {
+                return { totalScore: 0, breakdown: { websites: 0, avgLatency: 0, minLatency: 0, connectTime: 0, ttfb: 0, speed: 0 } };
+            }
 
-            const latScore = Math.max(0, Math.min(20, 20 * (1 - (item.avgLatencyMs / 2500))));
-            const minLatScore = Math.max(0, Math.min(8, 8 * (1 - (item.minLatencyMs / 1500))));
-            const connScore = Math.max(0, Math.min(8, 8 * (1 - (item.avgConnectTimeMs / 800))));
-            const ttfbScore = Math.max(0, Math.min(7, 7 * (1 - (item.avgTtfbMs / 1500))));
-            const spdScore = Math.max(0, Math.min(7, (item.avgSpeedBps / (500 * 1024)) * 7));
+            const breakdown = {};
+            let total = 0;
+            Object.keys(SCORE_MAX).forEach(key => {
+                // Raw component points are already gated by website reachability.
+                const weighted = (raw[key] / SCORE_MAX[key]) * weights[key];
+                total += weighted;
+                breakdown[key] = Math.round(weighted);
+            });
 
-            const rawPerfScore = latScore + minLatScore + connScore + ttfbScore + spdScore;
-            const gatedPerfScore = rawPerfScore * usabilityRatio;
-            const totalScore = Math.round(wScore + gatedPerfScore);
-
-            return {
-                totalScore,
-                breakdown: {
-                    websites: Math.round(wScore),
-                    avgLatency: Math.round(latScore * usabilityRatio),
-                    minLatency: Math.round(minLatScore * usabilityRatio),
-                    connectTime: Math.round(connScore * usabilityRatio),
-                    ttfb: Math.round(ttfbScore * usabilityRatio),
-                    speed: Math.round(spdScore * usabilityRatio),
-                    anonymity: item.anonymity === 'ELITE / ANONYMOUS' ? 10 : 0,
-                }
-            };
+            return { totalScore: Math.round((total * 100) / weightTotal), breakdown };
         }
 
         function recalculateAllScores() {
@@ -131,7 +138,7 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
             const heroCopyBtn = document.getElementById('hero-copy-btn');
 
             if (heroUrl) heroUrl.textContent = \`\${best.proxy.protocol.toUpperCase()}://\${best.proxy.ip}:\${best.proxy.port}\`;
-            if (heroMeta) heroMeta.innerHTML = \`<span>\${best.proxy.country || 'Global'}</span> &bull; <span>\${best.anonymity}</span> &bull; <span>\${best.websitesPassed}/\${best.websitesTotal} Targets (\${best.websitePassRatePercent}%)</span>\`;
+            if (heroMeta) heroMeta.innerHTML = \`<span>\${best.proxy.country || 'Global'}</span> &bull; <span>\${best.egressStatus}</span> &bull; <span>\${best.websitesPassed}/\${best.websitesAttempted} targets probed (\${best.websitesPassed}/\${best.websitesAvailable} reachable)</span>\`;
             if (heroScore) heroScore.textContent = best.compositeScore;
             if (heroLatency) heroLatency.textContent = \`\${best.avgLatencyMs} ms\`;
             if (heroConnect) heroConnect.textContent = \`\${best.avgConnectTimeMs} ms\`;
@@ -183,7 +190,7 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
                 showToast('No rows to export');
                 return;
             }
-            const headers = ['Rank', 'Score', 'Protocol', 'IP', 'Port', 'Country', 'Status', 'Anonymity', 'WebsitesPassed', 'WebsitesTotal', 'WebPassRate%', 'AvgLatency_ms', 'MinLatency_ms', 'ConnectTime_ms', 'TTFB_ms', 'Speed_Bps', 'ProxyUrl'];
+            const headers = ['Rank', 'Score', 'Protocol', 'IP', 'Port', 'Country', 'Status', 'EgressIP', 'EgressProbesStarted', 'EgressProbesPassed', 'WebsitesAvailable', 'WebsitesAttempted', 'WebsitesPassed', 'WebPassRate%', 'PerfSource', 'AvgLatency_ms', 'MinLatency_ms', 'ConnectTime_ms', 'TTFB_ms', 'Speed_Bps', 'ProxyUrl'];
             const rows = filtered.map(b => [
                 b.rank || '',
                 b.compositeScore || 0,
@@ -192,10 +199,14 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
                 b.proxy.port,
                 b.proxy.country || '',
                 b.status,
-                b.anonymity || 'UNKNOWN',
+                b.egressStatus || 'UNKNOWN',
+                b.endpointsStarted || 0,
+                b.endpointsPassed || 0,
+                b.websitesAvailable || 0,
+                b.websitesAttempted || 0,
                 b.websitesPassed || 0,
-                b.websitesTotal || 0,
                 b.websitePassRatePercent || 0,
+                b.performanceSource || '',
                 b.avgLatencyMs,
                 b.minLatencyMs,
                 b.avgConnectTimeMs,
@@ -360,9 +371,9 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
                         vA = a.status;
                         vB = b.status;
                         break;
-                    case 'anonymity':
-                        vA = a.anonymity || '';
-                        vB = b.anonymity || '';
+                    case 'egress':
+                        vA = a.egressStatus || '';
+                        vB = b.egressStatus || '';
                         break;
                     case 'websites':
                         vA = a.websitesPassed || 0;
@@ -487,7 +498,7 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
             const activeTab = currentSubTabs[pKey] || 'websites';
 
             const bd = item.scoreBreakdown || {};
-            const tooltipText = \`Websites: \${bd.websites || 0} pts | Avg Lat: \${bd.avgLatency || 0} pts | Min Lat: \${bd.minLatency || 0} pts | Connect: \${bd.connectTime || 0} pts | TTFB: \${bd.ttfb || 0} pts | Speed: \${bd.speed || 0} pts | Anon: \${bd.anonymity || 0} pts\`;
+            const tooltipText = \`Websites: \${bd.websites || 0} pts | Avg Lat: \${bd.avgLatency || 0} pts | Min Lat: \${bd.minLatency || 0} pts | Connect: \${bd.connectTime || 0} pts | TTFB: \${bd.ttfb || 0} pts | Speed: \${bd.speed || 0} pts\`;
 
             const latencyClass = getLatencyClass(item.avgLatencyMs, item.status);
             const statusPill = item.status === 'PASS' 
@@ -511,9 +522,9 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
                 <td><span class="pill pill-protocol">\${p.protocol.toUpperCase()}</span></td>
                 <td>\${p.country || '--'}</td>
                 <td>\${statusPill}</td>
-                <td style="font-size: 0.72rem;">\${item.anonymity || '--'}</td>
+                <td style="font-size: 0.72rem;">\${item.egressStatus || '--'}</td>
                 <td class="font-mono">
-                    \${item.websitesPassed}/\${item.websitesTotal} (\${item.websitePassRatePercent}%)
+                    \${item.websitesPassed}/\${item.websitesAttempted} probed, \${item.websitesPassed}/\${item.websitesAvailable} ok (\${item.websitePassRatePercent}%)
                 </td>
                 <td class="latency-badge \${latencyClass}">\${item.avgLatencyMs + ' ms'}</td>
                 <td class="font-mono \${latencyClass}">\${item.minLatencyMs + ' ms'}</td>

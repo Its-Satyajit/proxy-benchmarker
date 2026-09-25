@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import type { AppConfig, CandidateFeed, Protocol, ProxyItem } from "./types.js";
 import { log, ansi } from "./terminal.js";
 import { resolveOneIPv4 } from "./dns.js";
+import { isValidProxyTarget } from "./proxy.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -48,7 +49,7 @@ export function parseProxyFeedText(text: string, defaultProtocol?: Protocol): Pr
             const port = Number.parseInt(urlMatch[3], 10);
             const country = urlMatch[4] || undefined;
 
-            if (["http", "https", "socks4", "socks5"].includes(protocol) && !Number.isNaN(port)) {
+            if (["http", "https", "socks4", "socks5"].includes(protocol) && isValidProxyTarget(ip, port)) {
                 rows.push({ protocol, ip, port, country, raw: line });
                 continue;
             }
@@ -59,7 +60,7 @@ export function parseProxyFeedText(text: string, defaultProtocol?: Protocol): Pr
         if (bareMatch && bareMatch[1] && bareMatch[2]) {
             const ip = bareMatch[1];
             const port = Number.parseInt(bareMatch[2], 10);
-            if (!Number.isNaN(port)) {
+            if (isValidProxyTarget(ip, port)) {
                 if (defaultProtocol) {
                     rows.push({ protocol: defaultProtocol, ip, port, raw: `${defaultProtocol}://${ip}:${port}` });
                 } else {
@@ -79,7 +80,7 @@ export function parseProxyFeedText(text: string, defaultProtocol?: Protocol): Pr
 
             if (!ip || !portRaw) continue;
             const port = Number.parseInt(portRaw, 10);
-            if (Number.isNaN(port) || !/^[0-9.]+$/.test(ip)) continue;
+            if (!isValidProxyTarget(ip, port)) continue;
 
             const protoTokens = (protoRaw || "http").toLowerCase().split(/[|,/]/);
             for (const token of protoTokens) {

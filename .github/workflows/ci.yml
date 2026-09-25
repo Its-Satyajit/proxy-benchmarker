@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   validate:
-    name: Typecheck & Build
+    name: Typecheck, Test & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -48,5 +48,16 @@ jobs:
       - name: Typecheck TypeScript
         run: nub run typecheck
 
+      - name: Run Test Suite
+        run: nub run test
+
       - name: Build Standalone Bundle
         run: nub run build
+
+      # The runners download the committed bundle, so source and dist must not drift.
+      - name: Verify Committed Bundle Is Fresh
+        run: |
+          if ! git diff --exit-code -- dist/; then
+            echo "::error::dist/proxy-benchmarker.min.mjs is stale. Run 'nub run build' and commit the result."
+            exit 1
+          fi

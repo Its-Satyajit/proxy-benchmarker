@@ -12,13 +12,23 @@ import type {
     WebsiteProbeResult,
     BenchmarkItem,
     BenchmarkRunResult,
-    LatencyTier,
-    AnonymityStatus,
+    EgressStatus,
+    PerformanceSource,
     Protocol
 } from "./types.js";
 import { parseUrl } from "./dns.js";
 import { buildCurlProxyArgs } from "./proxy.js";
 import { live, ansi, formatPercent, formatRate, formatDuration } from "./terminal.js";
+import { configureCurlGate, withCurlSlot } from "./curl-gate.js";
+import { resolveWorkerCount } from "./limits.js";
+import {
+    averageLatency,
+    classifyEgress,
+    latencyTier,
+    ratioPercent,
+    scoreCandidate,
+    summarizeSamples
+} from "./metrics.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -133,7 +143,6 @@ export async function testProxyEndpoint(
 
     const args: string[] = [
         "--ipv4",
-        "--insecure",
         "--silent",
         "--show-error",
         "--fail-with-body",
@@ -144,6 +153,11 @@ export async function testProxyEndpoint(
         "-w", writeOutFormat,
         ...buildCurlProxyArgs(proxy),
     ];
+
+    // Transport reachability probe by default; strict TLS only when asked.
+    if (!config.tlsVerify) {
+        args.splice(1, 0, "--insecure");
+    }
 
     if (endpoint.resolvedIp) {
         args.push("--resolve", `${target.hostname}:${target.port}:${endpoint.resolvedIp}`);
@@ -158,12 +172,12 @@ export async function testProxyEndpoint(
     let exitCode = 0;
 
     try {
-        const res = await execFileAsync("curl", args, {
+        const res = await withCurlSlot(() => execFileAsync("curl", args, {
             timeout: timeoutMs,
             maxBuffer: 1024 * 1024,
             windowsHide: true,
             signal,
-        });
+        }));
         stdout = res.stdout || "";
         stderr = res.stderr || "";
     } catch (error: any) {
@@ -269,7 +283,6 @@ export async function testProxyWebsite(
 
     const args: string[] = [
         "--ipv4",
-        "--insecure",
         "--silent",
         "--show-error",
         "-o", "/dev/null",
@@ -280,6 +293,10 @@ export async function testProxyWebsite(
         "-w", writeOutFormat,
         ...buildCurlProxyArgs(proxy),
     ];
+
+    if (!config.tlsVerify) {
+        args.splice(1, 0, "--insecure");
+    }
 
     if (website.resolvedIp && (proxy.protocol === "http" || proxy.protocol === "https")) {
         args.push("--resolve", `${target.hostname}:${target.port}:${website.resolvedIp}`);
@@ -294,11 +311,11 @@ export async function testProxyWebsite(
     let exitCode = 0;
 
     try {
-        const res = await execFileAsync("curl", args, {
+        const res = await withCurlSlot(() => execFileAsync("curl", args, {
             timeout: timeoutMs,
             maxBuffer: 512 * 1024,
             windowsHide: true,
-        });
+        }));
         stdout = res.stdout || "";
         stderr = res.stderr || "";
     } catch (error: any) {
@@ -352,15 +369,24 @@ export async function testProxyWebsite(
     };
 }
 
+export interface WebsiteSweepResult {
+    results: WebsiteProbeResult[];
+    /** Probes actually launched. */
+    attempted: number;
+    /** True when the sweep stopped after the first batch failed. */
+    earlyExit: boolean;
+}
+
 export async function benchmarkTopWebsitesForProxy(
     proxy: ProxyItem,
     websites: WebsiteTarget[],
     config: AppConfig
-): Promise<WebsiteProbeResult[]> {
+): Promise<WebsiteSweepResult> {
     const results: WebsiteProbeResult[] = [];
-    const concurrency = Math.max(config.websiteConcurrency || 5, 2);
+    const concurrency = Math.max(config.websiteConcurrency, 1);
 
     let anyPassed = false;
+    let earlyExit = false;
     for (let i = 0; i < websites.length; i += concurrency) {
         const batch = websites.slice(i, i + concurrency);
         const batchResults = await Promise.all(
@@ -372,36 +398,38 @@ export async function benchmarkTopWebsitesForProxy(
             anyPassed = true;
         }
 
-        // Fast-fail: If the first batch (e.g. Google, Cloudflare, MS, Apple) completely fails/times out,
-        // this proxy does not support HTTP CONNECT / SSL web routing. Avoid sending 40+ more useless requests.
+        // Fast-fail: if the first batch completely fails/times out, this proxy
+        // cannot route HTTP CONNECT/SSL. Record what was attempted instead of
+        // padding the report with un-attempted targets.
         if (results.length >= concurrency && !anyPassed) {
+            earlyExit = true;
             break;
         }
     }
 
-    return results;
-}
-
-function calculateMedian(numbers: number[]): number {
-    if (numbers.length === 0) return 0;
-    const sorted = [...numbers].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    const midVal = sorted[mid] ?? 0;
-    const prevVal = sorted[mid - 1] ?? 0;
-    return sorted.length % 2 !== 0
-        ? midVal
-        : Math.round((prevVal + midVal) / 2);
+    return { results, attempted: results.length, earlyExit };
 }
 
 /* ============================================================
  * Fast Health Verification Check (Phase 2)
  * ============================================================ */
 
+export interface HealthVerification {
+    isAlive: boolean;
+    exitIp: string | null;
+    strategy: "fast" | "full";
+    /** Probe requests launched, including ones cancelled after a winner appeared. */
+    requestsStarted: number;
+    /** Results actually collected; cancelled losers are not counted. */
+    resultsCompleted: number;
+    endpointResults: EndpointProbeResult[];
+}
+
 export async function verifyProxyHealth(
     proxy: ProxyItem,
     endpoints: TestEndpoint[],
     config: AppConfig
-): Promise<{ isAlive: boolean; exitIp: string | null; endpointResults: EndpointProbeResult[] }> {
+): Promise<HealthVerification> {
     if (config.fullBenchmark) {
         const endpointResults: EndpointProbeResult[] = [];
         let exitIp: string | null = null;
@@ -412,12 +440,20 @@ export async function verifyProxyHealth(
                 exitIp = epResult.returnedIp;
             }
         }
-        return { isAlive: Boolean(exitIp), exitIp, endpointResults };
+        return {
+            isAlive: Boolean(exitIp),
+            exitIp,
+            strategy: "full",
+            requestsStarted: endpoints.length,
+            resultsCompleted: endpointResults.length,
+            endpointResults,
+        };
     }
 
-    // Parallel fast verification with Promise.any across top 2 endpoints
-    // The losing probe is aborted so its curl process does not linger.
+    // Fast path: race the top 2 endpoints, then cancel the loser so its curl
+    // process does not outlive the worker that started it.
     const candidateEndpoints = endpoints.slice(0, 2);
+    const requestsStarted = candidateEndpoints.length;
     const abort = new AbortController();
     const probePromises = candidateEndpoints.map(async (ep) => {
         const res = await testProxyEndpoint(proxy, ep, config, abort.signal);
@@ -430,18 +466,27 @@ export async function verifyProxyHealth(
     try {
         const fastestSuccess = await Promise.any(probePromises);
         abort.abort();
+        // Wait for the cancelled child to actually exit before the worker moves on.
+        await Promise.allSettled(probePromises);
         return {
             isAlive: true,
             exitIp: fastestSuccess.returnedIp,
+            strategy: "fast",
+            requestsStarted,
+            resultsCompleted: 1,
             endpointResults: [fastestSuccess],
         };
     } catch (aggregateErr: any) {
+        await Promise.allSettled(probePromises);
         const failedResults: EndpointProbeResult[] = Array.isArray(aggregateErr?.errors)
             ? aggregateErr.errors
             : [];
         return {
             isAlive: false,
             exitIp: null,
+            strategy: "fast",
+            requestsStarted,
+            resultsCompleted: failedResults.length,
             endpointResults: failedResults,
         };
     }
@@ -454,7 +499,7 @@ export async function verifyProxyHealth(
 interface CandidateData {
     proxy: ProxyItem;
     exitIp: string | null;
-    endpointResults: EndpointProbeResult[];
+    verification: HealthVerification;
 }
 
 export async function runProxyTests(
@@ -463,6 +508,9 @@ export async function runProxyTests(
     config: AppConfig,
     localPublicIp: string | null = null
 ): Promise<BenchmarkRunResult> {
+    // One explicit ceiling for every curl child process in the run.
+    configureCurlGate(config.maxCurlProcesses);
+
     const results: Record<Protocol, ProxyItem[]> = {
         http: [],
         https: [],
@@ -471,10 +519,10 @@ export async function runProxyTests(
     };
 
     /* ----------------------------------------------------------
-     * STAGE 1: Ultra-Fast Async TCP Port Pre-Filter (500-800 Sockets)
+     * STAGE 1: Async TCP Port Pre-Filter
      * ---------------------------------------------------------- */
-    const tcpConcurrency = Math.min(Math.max(config.tcpConcurrency || 1500, 50), proxies.length);
-    const tcpTimeoutMs = config.tcpTimeoutMs || 1200;
+    const tcpConcurrency = resolveWorkerCount(config.tcpConcurrency, proxies.length);
+    const tcpTimeoutMs = config.tcpTimeoutMs;
 
     process.stdout.write(`\n${ansi.bold}${ansi.cyan}>> Stage 1: Async TCP Socket Pre-Filter (${tcpConcurrency} parallel sockets)${ansi.reset}\n`);
 
@@ -536,10 +584,10 @@ export async function runProxyTests(
     );
 
     /* ----------------------------------------------------------
-     * STAGE 2: Proxy Protocol & Exit IP Verification (300 workers)
+     * STAGE 2: Proxy Protocol & Exit IP Verification
      * ---------------------------------------------------------- */
     const aliveCandidates: CandidateData[] = [];
-    const stage2Concurrency = Math.min(Math.max(config.concurrency || 300, 10), Math.max(tcpResponsiveProxies.length, 1));
+    const stage2Concurrency = resolveWorkerCount(config.concurrency, tcpResponsiveProxies.length);
 
     if (tcpResponsiveProxies.length > 0) {
         process.stdout.write(`${ansi.bold}${ansi.cyan}>> Stage 2: Health & Exit IP Verification (${stage2Concurrency} parallel workers)${ansi.reset}\n`);
@@ -585,7 +633,7 @@ export async function runProxyTests(
                         aliveCandidates.push({
                             proxy,
                             exitIp: health.exitIp,
-                            endpointResults: health.endpointResults,
+                            verification: health,
                         });
                     } else {
                         failedStage2++;
@@ -611,12 +659,13 @@ export async function runProxyTests(
     }
 
     /* ----------------------------------------------------------
-     * STAGE 3: Deep Top 50 Websites Benchmark on Alive Proxies
+     * STAGE 3: Website Reachability Benchmark on Alive Proxies
      * ---------------------------------------------------------- */
     const benchmarkReports: BenchmarkItem[] = [];
 
     if (aliveCandidates.length > 0) {
-        process.stdout.write(`${ansi.bold}${ansi.cyan}>> Stage 3: Top 50 Global Websites Benchmark (${aliveCandidates.length} alive proxies)${ansi.reset}\n`);
+        const websitesAvailable = config.benchmarkTopWebsites ? config.topWebsites.length : 0;
+        process.stdout.write(`${ansi.bold}${ansi.cyan}>> Stage 3: Website Reachability (${aliveCandidates.length} alive proxies, ${websitesAvailable} targets, global curl cap ${config.maxCurlProcesses})${ansi.reset}\n`);
 
         const stage3StartedAt = Date.now();
         let completedStage3 = 0;
@@ -637,7 +686,7 @@ export async function runProxyTests(
             );
         }
 
-        const stage3Concurrency = Math.min(Math.max(Math.floor(stage2Concurrency / 3), 5), config.concurrency, aliveCandidates.length);
+        const stage3Concurrency = resolveWorkerCount(config.websiteWorkers, aliveCandidates.length);
 
         async function workerStage3() {
             while (true) {
@@ -648,109 +697,76 @@ export async function runProxyTests(
                 const candidate = aliveCandidates[index];
                 if (!candidate) continue;
 
-                const { proxy, exitIp, endpointResults } = candidate;
+                const { proxy, exitIp, verification } = candidate;
 
                 let websiteResults: WebsiteProbeResult[] = [];
+                let websitesAttempted = 0;
+                let websitesEarlyExit = false;
                 if (config.benchmarkTopWebsites && config.topWebsites.length > 0) {
                     try {
-                        websiteResults = await benchmarkTopWebsitesForProxy(proxy, config.topWebsites, config);
+                        const sweep = await benchmarkTopWebsitesForProxy(proxy, config.topWebsites, config);
+                        websiteResults = sweep.results;
+                        websitesAttempted = sweep.attempted;
+                        websitesEarlyExit = sweep.earlyExit;
                     } catch {
                         websiteResults = [];
                     }
                 }
 
+                const endpointResults = verification.endpointResults;
                 const successfulEp = endpointResults.filter((e) => e.ok);
                 const successfulWebsites = websiteResults.filter((w) => w.ok);
-                const allSuccessful = [...successfulEp, ...successfulWebsites];
 
-                const latencies = allSuccessful.map((e) => e.totalLatencyMs);
-                const connectTimes = allSuccessful.map((e) => e.connectTimeMs);
-                const ttfbTimes = allSuccessful.map((e) => e.ttfbMs);
-                const speeds = allSuccessful.map((e) => e.downloadSpeedBps);
+                // Health (egress verification) and website performance are
+                // different measurements: keep separate aggregates and only mix
+                // when there is no website data at all.
+                const egressLatencyMs = averageLatency(successfulEp);
+                const websiteMetrics = summarizeSamples(successfulWebsites);
+                const hasWebsiteSamples = successfulWebsites.length > 0;
+                const performanceSource: PerformanceSource = hasWebsiteSamples ? "websites" : "egress-endpoints";
+                const performance = hasWebsiteSamples ? websiteMetrics : summarizeSamples(successfulEp);
 
-                const avgLatencyMs = latencies.length > 0
-                    ? Math.round(latencies.reduce((sum, val) => sum + val, 0) / latencies.length)
-                    : 0;
+                const {
+                    avgLatencyMs,
+                    minLatencyMs,
+                    maxLatencyMs,
+                    medianLatencyMs,
+                    avgConnectTimeMs,
+                    avgTtfbMs,
+                    avgSpeedBps
+                } = performance;
 
-                const minLatencyMs = latencies.length > 0 ? Math.min(...latencies) : 0;
-                const maxLatencyMs = latencies.length > 0 ? Math.max(...latencies) : 0;
-                const medianLatencyMs = calculateMedian(latencies);
+                const egressStatus: EgressStatus = classifyEgress(exitIp, localPublicIp);
+                const tier = latencyTier(avgLatencyMs);
 
-                const avgConnectTimeMs = connectTimes.length > 0
-                    ? Math.round(connectTimes.reduce((sum, val) => sum + val, 0) / connectTimes.length)
-                    : 0;
-
-                const avgTtfbMs = ttfbTimes.length > 0
-                    ? Math.round(ttfbTimes.reduce((sum, val) => sum + val, 0) / ttfbTimes.length)
-                    : 0;
-
-                const avgSpeedBps = speeds.length > 0
-                    ? Math.round(speeds.reduce((sum, val) => sum + val, 0) / speeds.length)
-                    : 0;
-
-                let anonymity: AnonymityStatus = "UNKNOWN";
-                if (exitIp) {
-                    if (localPublicIp && exitIp === localPublicIp) {
-                        anonymity = "TRANSPARENT (LEAKING)";
-                    } else {
-                        anonymity = "ELITE / ANONYMOUS";
-                    }
-                }
-
-                let tier: LatencyTier = "SLOW";
-                if (avgLatencyMs < 400) tier = "EXCELLENT";
-                else if (avgLatencyMs < 800) tier = "GOOD";
-                else if (avgLatencyMs < 1500) tier = "MODERATE";
-
-                const totalWebsites = config.topWebsites.length;
-                const websitePassRatePercent = totalWebsites > 0
-                    ? Number.parseFloat(((successfulWebsites.length / totalWebsites) * 100).toFixed(1))
-                    : 0;
-
-                // Usability-Gated Multi-Factor Scoring (0 - 100 pts)
-                const usabilityRatio = totalWebsites > 0 ? (successfulWebsites.length / totalWebsites) : 1;
-
-                // 1. Direct Web Compatibility (50 pts max)
-                const webScore = usabilityRatio * 50;
-
-                // 2. Performance Metrics (50 pts max, gated by Usability Ratio)
-                const avgLatencyScore = Math.max(0, Math.min(20, 20 * (1 - (avgLatencyMs / 2500))));
-                const minLatencyScore = Math.max(0, Math.min(8, 8 * (1 - (minLatencyMs / 1500))));
-                const connectScore = Math.max(0, Math.min(8, 8 * (1 - (avgConnectTimeMs / 800))));
-                const ttfbScore = Math.max(0, Math.min(7, 7 * (1 - (avgTtfbMs / 1500))));
-                const speedScore = Math.max(0, Math.min(7, (avgSpeedBps / (500 * 1024)) * 7));
-
-                const rawPerformanceScore = avgLatencyScore + minLatencyScore + connectScore + ttfbScore + speedScore;
-                const gatedPerformanceScore = rawPerformanceScore * usabilityRatio;
-
-                const compositeScore = Math.round(webScore + gatedPerformanceScore);
-
-                const scoreBreakdown = {
-                    websites: Math.round(webScore),
-                    avgLatency: Math.round(avgLatencyScore * usabilityRatio),
-                    minLatency: Math.round(minLatencyScore * usabilityRatio),
-                    connectTime: Math.round(connectScore * usabilityRatio),
-                    ttfb: Math.round(ttfbScore * usabilityRatio),
-                    speed: Math.round(speedScore * usabilityRatio),
-                    anonymity: anonymity === "ELITE / ANONYMOUS" ? 10 : 0,
-                };
+                // Scoring keeps the full target list as the usability denominator;
+                // reported pass rates use the probes that actually ran.
+                const usabilityRatio = websitesAvailable > 0
+                    ? Math.min(1, successfulWebsites.length / websitesAvailable)
+                    : 1;
+                const { compositeScore, breakdown } = scoreCandidate(performance, usabilityRatio);
 
                 const benchmarkData: BenchmarkItem = {
                     proxy,
                     status: "PASS",
                     tier,
                     compositeScore,
-                    scoreBreakdown,
+                    scoreBreakdown: breakdown,
                     exitIp,
-                    anonymity,
-                    endpointsTested: endpointResults.length,
+                    egressStatus,
+                    verificationStrategy: verification.strategy,
+                    endpointsStarted: verification.requestsStarted,
+                    endpointsCompleted: verification.resultsCompleted,
                     endpointsPassed: successfulEp.length,
                     endpointsTotal: endpoints.length,
-                    passRatePercent: Number.parseFloat(((successfulEp.length / endpoints.length) * 100).toFixed(1)),
-                    websitesTested: websiteResults.length,
+                    endpointPassRatePercent: ratioPercent(successfulEp.length, verification.resultsCompleted),
+                    websitesAvailable,
+                    websitesAttempted,
                     websitesPassed: successfulWebsites.length,
-                    websitesTotal: totalWebsites,
-                    websitePassRatePercent,
+                    websitePassRatePercent: ratioPercent(successfulWebsites.length, websitesAttempted),
+                    websitesEarlyExit,
+                    performanceSource,
+                    egressVerificationLatencyMs: egressLatencyMs,
                     avgLatencyMs,
                     minLatencyMs,
                     maxLatencyMs,
