@@ -1,27 +1,27 @@
 {
-  "generatedAt": "2026-09-25T13:29:43.887Z",
+  "generatedAt": "2026-09-25T13:30:46.350Z",
   "stats": {
     "total": 53140,
     "completed": 53140,
     "passed": 3,
     "failed": 53137,
     "localPublicIp": "46.202.162.224",
-    "durationSeconds": 42.231,
-    "startedAt": "2026-09-25T13:29:01.656Z",
-    "completedAt": "2026-09-25T13:29:43.887Z"
+    "durationSeconds": 44.151,
+    "startedAt": "2026-09-25T13:30:02.199Z",
+    "completedAt": "2026-09-25T13:30:46.350Z"
   },
   "endpoints": [
     {
       "name": "api.ipify.org",
       "url": "https://api.ipify.org",
       "parser": "plain",
-      "resolvedIp": "104.26.12.205"
+      "resolvedIp": "172.67.74.152"
     },
     {
       "name": "api64.ipify.org",
       "url": "https://api64.ipify.org",
       "parser": "plain",
-      "resolvedIp": "173.231.16.77"
+      "resolvedIp": "104.237.62.213"
     },
     {
       "name": "ifconfig.me",
@@ -45,7 +45,7 @@
       "name": "checkip.amazonaws.com",
       "url": "https://checkip.amazonaws.com",
       "parser": "plain",
-      "resolvedIp": "34.251.184.218"
+      "resolvedIp": "18.140.230.25"
     },
     {
       "name": "ip.me",
@@ -69,7 +69,7 @@
       "name": "ifconfig.co",
       "url": "https://ifconfig.co/ip",
       "parser": "plain",
-      "resolvedIp": "172.67.168.106"
+      "resolvedIp": "104.21.54.91"
     },
     {
       "name": "myexternalip.com",
@@ -82,56 +82,56 @@
     {
       "proxy": {
         "protocol": "socks5",
-        "ip": "132.243.168.30",
-        "port": 9150,
+        "ip": "199.66.182.232",
+        "port": 4145,
         "country": "US",
-        "raw": "socks5://132.243.168.30:9150,US,Unknown"
+        "raw": "socks5://199.66.182.232:4145,US,Douglasville"
       },
       "status": "PASS",
       "tier": "SLOW",
-      "compositeScore": 12,
+      "compositeScore": 18,
       "scoreBreakdown": {
-        "websites": 10,
+        "websites": 16,
         "avgLatency": 0,
         "minLatency": 0,
-        "connectTime": 1,
+        "connectTime": 2,
         "ttfb": 0,
         "speed": 0,
         "anonymity": 10
       },
-      "exitIp": "45.84.107.54",
+      "exitIp": "199.66.182.232",
       "anonymity": "ELITE / ANONYMOUS",
       "endpointsTested": 1,
       "endpointsPassed": 1,
       "endpointsTotal": 11,
       "passRatePercent": 9.1,
       "websitesTested": 53,
-      "websitesPassed": 11,
+      "websitesPassed": 17,
       "websitesTotal": 53,
-      "websitePassRatePercent": 20.8,
-      "avgLatencyMs": 2769,
-      "minLatencyMs": 1429,
+      "websitePassRatePercent": 32.1,
+      "avgLatencyMs": 2820,
+      "minLatencyMs": 1965,
       "maxLatencyMs": 3501,
-      "medianLatencyMs": 2960,
-      "avgConnectTimeMs": 162,
-      "avgTtfbMs": 2520,
-      "avgSpeedBps": 35745,
+      "medianLatencyMs": 2800,
+      "avgConnectTimeMs": 315,
+      "avgTtfbMs": 2339,
+      "avgSpeedBps": 14750,
       "firstFailedEndpoint": null,
       "failureReason": null,
       "endpointDetails": [
         {
           "name": "api.ipify.org",
           "url": "https://api.ipify.org",
-          "resolvedIp": "104.26.12.205",
+          "resolvedIp": "172.67.74.152",
           "ok": true,
           "httpCode": 200,
-          "totalLatencyMs": 1429,
-          "connectTimeMs": 158,
-          "sslHandshakeMs": 1024,
-          "ttfbMs": 1429,
-          "downloadSpeedBps": 8,
-          "downloadSizeBytes": 12,
-          "returnedIp": "45.84.107.54",
+          "totalLatencyMs": 1966,
+          "connectTimeMs": 261,
+          "sslHandshakeMs": 1407,
+          "ttfbMs": 1966,
+          "downloadSpeedBps": 7,
+          "downloadSizeBytes": 14,
+          "returnedIp": "199.66.182.232",
           "reason": null
         }
       ],
@@ -141,30 +141,30 @@
           "domain": "google.com",
           "category": "Search / Infra",
           "url": "https://www.google.com/generate_204",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ok": true,
+          "httpCode": 204,
+          "totalLatencyMs": 1965,
+          "connectTimeMs": 263,
+          "sslHandshakeMs": 1411,
+          "ttfbMs": 1964,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": null
         },
         {
           "name": "Cloudflare",
           "domain": "cloudflare.com",
           "category": "CDN / Infra",
           "url": "https://www.cloudflare.com/favicon.ico",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 2668,
+          "connectTimeMs": 257,
+          "sslHandshakeMs": 2128,
+          "ttfbMs": 2438,
+          "downloadSpeedBps": 340,
+          "downloadSizeBytes": 908,
+          "reason": null
         },
         {
           "name": "Cloudflare DNS",
@@ -173,12 +173,12 @@
           "url": "https://1.1.1.1/cdn-cgi/trace",
           "ok": true,
           "httpCode": 200,
-          "totalLatencyMs": 2940,
-          "connectTimeMs": 159,
-          "sslHandshakeMs": 1535,
-          "ttfbMs": 2940,
-          "downloadSpeedBps": 101,
-          "downloadSizeBytes": 297,
+          "totalLatencyMs": 2779,
+          "connectTimeMs": 260,
+          "sslHandshakeMs": 2217,
+          "ttfbMs": 2779,
+          "downloadSpeedBps": 105,
+          "downloadSizeBytes": 293,
           "reason": null
         },
         {
@@ -186,30 +186,30 @@
           "domain": "microsoft.com",
           "category": "Search / Tech",
           "url": "https://www.microsoft.com",
-          "ok": false,
-          "httpCode": 0,
+          "ok": true,
+          "httpCode": 200,
           "totalLatencyMs": 3501,
-          "connectTimeMs": 156,
-          "sslHandshakeMs": 2433,
-          "ttfbMs": 0,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Operation timed out after 3500 milliseconds with 0 bytes received"
+          "connectTimeMs": 250,
+          "sslHandshakeMs": 1932,
+          "ttfbMs": 2316,
+          "downloadSpeedBps": 6925,
+          "downloadSizeBytes": 24245,
+          "reason": null
         },
         {
           "name": "Apple",
           "domain": "apple.com",
           "category": "Tech / Infra",
           "url": "https://www.apple.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 3501,
+          "connectTimeMs": 250,
+          "sslHandshakeMs": 2259,
+          "ttfbMs": 2616,
+          "downloadSpeedBps": 7778,
+          "downloadSizeBytes": 27228,
+          "reason": null
         },
         {
           "name": "Bing",
@@ -218,58 +218,58 @@
           "url": "https://www.bing.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 3504,
-          "connectTimeMs": 169,
-          "sslHandshakeMs": 2170,
-          "ttfbMs": 0,
+          "totalLatencyMs": 796,
+          "connectTimeMs": 273,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 796,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Operation timed out after 3503 milliseconds with 0 bytes received"
+          "reason": "curl: (97) cannot complete SOCKS5 connection to www.bing.com. (4)"
         },
         {
           "name": "DuckDuckGo",
           "domain": "duckduckgo.com",
           "category": "Search",
           "url": "https://duckduckgo.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 3501,
+          "connectTimeMs": 274,
+          "sslHandshakeMs": 1605,
+          "ttfbMs": 2089,
+          "downloadSpeedBps": 78658,
+          "downloadSizeBytes": 275332,
+          "reason": null
         },
         {
           "name": "Yahoo",
           "domain": "yahoo.com",
           "category": "Portal / Search",
           "url": "https://www.yahoo.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 3501,
+          "connectTimeMs": 261,
+          "sslHandshakeMs": 1797,
+          "ttfbMs": 2869,
+          "downloadSpeedBps": 11571,
+          "downloadSizeBytes": 40503,
+          "reason": null
         },
         {
           "name": "GitHub",
           "domain": "github.com",
           "category": "Developer",
           "url": "https://github.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 3501,
+          "connectTimeMs": 270,
+          "sslHandshakeMs": 2465,
+          "ttfbMs": 2794,
+          "downloadSpeedBps": 780,
+          "downloadSizeBytes": 2734,
+          "reason": null
         },
         {
           "name": "GitLab",
@@ -278,11 +278,11 @@
           "url": "https://gitlab.com",
           "ok": true,
           "httpCode": 301,
-          "totalLatencyMs": 2979,
-          "connectTimeMs": 156,
-          "sslHandshakeMs": 1622,
-          "ttfbMs": 2937,
-          "downloadSpeedBps": 30,
+          "totalLatencyMs": 2170,
+          "connectTimeMs": 259,
+          "sslHandshakeMs": 1606,
+          "ttfbMs": 1961,
+          "downloadSpeedBps": 41,
           "downloadSizeBytes": 91,
           "reason": null
         },
@@ -293,10 +293,10 @@
           "url": "https://stackoverflow.com",
           "ok": true,
           "httpCode": 302,
-          "totalLatencyMs": 3499,
-          "connectTimeMs": 160,
-          "sslHandshakeMs": 2403,
-          "ttfbMs": 3498,
+          "totalLatencyMs": 2114,
+          "connectTimeMs": 257,
+          "sslHandshakeMs": 1573,
+          "ttfbMs": 1902,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": null
@@ -306,15 +306,15 @@
           "domain": "npmjs.com",
           "category": "Developer",
           "url": "https://registry.npmjs.org",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2500,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2500,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 1965,
+          "connectTimeMs": 255,
+          "sslHandshakeMs": 1426,
+          "ttfbMs": 1965,
+          "downloadSpeedBps": 1,
+          "downloadSizeBytes": 2,
+          "reason": null
         },
         {
           "name": "Docker Hub",
@@ -323,12 +323,12 @@
           "url": "https://hub.docker.com",
           "ok": true,
           "httpCode": 200,
-          "totalLatencyMs": 3500,
-          "connectTimeMs": 166,
-          "sslHandshakeMs": 2163,
-          "ttfbMs": 3482,
-          "downloadSpeedBps": 3514,
-          "downloadSizeBytes": 12303,
+          "totalLatencyMs": 3501,
+          "connectTimeMs": 267,
+          "sslHandshakeMs": 1493,
+          "ttfbMs": 1844,
+          "downloadSpeedBps": 105324,
+          "downloadSizeBytes": 368747,
           "reason": null
         },
         {
@@ -336,15 +336,15 @@
           "domain": "developer.mozilla.org",
           "category": "Developer",
           "url": "https://developer.mozilla.org",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "ok": true,
+          "httpCode": 302,
+          "totalLatencyMs": 1993,
+          "connectTimeMs": 266,
+          "sslHandshakeMs": 1436,
+          "ttfbMs": 1993,
+          "downloadSpeedBps": 14,
+          "downloadSizeBytes": 29,
+          "reason": null
         },
         {
           "name": "Bitbucket",
@@ -353,13 +353,13 @@
           "url": "https://bitbucket.org",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2500,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2500,
+          "totalLatencyMs": 3502,
+          "connectTimeMs": 254,
+          "sslHandshakeMs": 1424,
+          "ttfbMs": 0,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Operation timed out after 3501 milliseconds with 0 bytes received"
         },
         {
           "name": "CDNJS",
@@ -367,14 +367,14 @@
           "category": "Developer CDN",
           "url": "https://cdnjs.cloudflare.com/robots.txt",
           "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "httpCode": 522,
+          "totalLatencyMs": 2632,
+          "connectTimeMs": 275,
+          "sslHandshakeMs": 1449,
+          "ttfbMs": 2632,
+          "downloadSpeedBps": 6,
+          "downloadSizeBytes": 16,
+          "reason": "HTTP 522"
         },
         {
           "name": "OpenAI",
@@ -382,29 +382,29 @@
           "category": "AI / Tech",
           "url": "https://openai.com",
           "ok": false,
-          "httpCode": 403,
-          "totalLatencyMs": 3448,
-          "connectTimeMs": 171,
-          "sslHandshakeMs": 2359,
-          "ttfbMs": 3403,
-          "downloadSpeedBps": 2857,
-          "downloadSizeBytes": 9851,
-          "reason": "HTTP 403"
+          "httpCode": 0,
+          "totalLatencyMs": 2507,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2506,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2506 milliseconds"
         },
         {
           "name": "Hugging Face",
           "domain": "huggingface.co",
           "category": "AI / Developer",
           "url": "https://huggingface.co",
-          "ok": true,
-          "httpCode": 200,
-          "totalLatencyMs": 3501,
-          "connectTimeMs": 160,
-          "sslHandshakeMs": 2205,
-          "ttfbMs": 3253,
-          "downloadSpeedBps": 18515,
-          "downloadSizeBytes": 64819,
-          "reason": null
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2507,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2507,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2507 milliseconds"
         },
         {
           "name": "YouTube",
@@ -413,28 +413,28 @@
           "url": "https://www.youtube.com/generate_204",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 833,
+          "connectTimeMs": 280,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 833,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (97) cannot complete SOCKS5 connection to www.youtube.com. (4)"
         },
         {
           "name": "Netflix",
           "domain": "netflix.com",
           "category": "Media / Streaming",
           "url": "https://www.netflix.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 3503,
-          "connectTimeMs": 149,
-          "sslHandshakeMs": 2051,
-          "ttfbMs": 0,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Operation timed out after 3502 milliseconds with 0 bytes received"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 3501,
+          "connectTimeMs": 254,
+          "sslHandshakeMs": 2032,
+          "ttfbMs": 2836,
+          "downloadSpeedBps": 25012,
+          "downloadSizeBytes": 87562,
+          "reason": null
         },
         {
           "name": "Spotify",
@@ -443,13 +443,13 @@
           "url": "https://www.spotify.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2500,
+          "totalLatencyMs": 2503,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2500,
+          "ttfbMs": 2503,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
         },
         {
           "name": "Twitch",
@@ -458,10 +458,10 @@
           "url": "https://www.twitch.tv",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
@@ -473,34 +473,19 @@
           "url": "https://vimeo.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 3501,
-          "connectTimeMs": 169,
-          "sslHandshakeMs": 1862,
-          "ttfbMs": 0,
+          "totalLatencyMs": 2504,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2504,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Operation timed out after 3500 milliseconds with 0 bytes received"
+          "reason": "curl: (28) Connection timed out after 2503 milliseconds"
         },
         {
           "name": "SoundCloud",
           "domain": "soundcloud.com",
           "category": "Media / Audio",
           "url": "https://soundcloud.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2502,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
-        },
-        {
-          "name": "Reddit",
-          "domain": "reddit.com",
-          "category": "Social / Community",
-          "url": "https://www.reddit.com",
           "ok": false,
           "httpCode": 0,
           "totalLatencyMs": 2501,
@@ -512,34 +497,49 @@
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
+          "name": "Reddit",
+          "domain": "reddit.com",
+          "category": "Social / Community",
+          "url": "https://www.reddit.com",
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2503,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2503,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2503 milliseconds"
+        },
+        {
           "name": "Wikipedia",
           "domain": "wikipedia.org",
           "category": "Reference",
           "url": "https://en.wikipedia.org",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2500,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2500,
+          "ok": true,
+          "httpCode": 301,
+          "totalLatencyMs": 2820,
+          "connectTimeMs": 259,
+          "sslHandshakeMs": 2265,
+          "ttfbMs": 2581,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": null
         },
         {
           "name": "X / Twitter",
           "domain": "x.com",
           "category": "Social Media",
           "url": "https://x.com",
-          "ok": true,
-          "httpCode": 200,
-          "totalLatencyMs": 3501,
-          "connectTimeMs": 161,
-          "sslHandshakeMs": 1118,
-          "ttfbMs": 3362,
-          "downloadSpeedBps": 1952,
-          "downloadSizeBytes": 6836,
-          "reason": null
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "LinkedIn",
@@ -554,22 +554,22 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Instagram",
           "domain": "instagram.com",
           "category": "Social Media",
           "url": "https://www.instagram.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 3502,
-          "connectTimeMs": 155,
-          "sslHandshakeMs": 2425,
-          "ttfbMs": 0,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Operation timed out after 3501 milliseconds with 0 bytes received"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 3501,
+          "connectTimeMs": 1256,
+          "sslHandshakeMs": 2438,
+          "ttfbMs": 2882,
+          "downloadSpeedBps": 28935,
+          "downloadSizeBytes": 101297,
+          "reason": null
         },
         {
           "name": "Discord",
@@ -578,13 +578,13 @@
           "url": "https://discord.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 3502,
-          "connectTimeMs": 169,
-          "sslHandshakeMs": 2393,
-          "ttfbMs": 0,
+          "totalLatencyMs": 2502,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Operation timed out after 3502 milliseconds with 0 bytes received"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Telegram",
@@ -599,7 +599,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Slack",
@@ -608,13 +608,13 @@
           "url": "https://slack.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Pinterest",
@@ -629,7 +629,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Quora",
@@ -637,14 +637,14 @@
           "category": "Social / Q&A",
           "url": "https://www.quora.com",
           "ok": false,
-          "httpCode": 403,
-          "totalLatencyMs": 1753,
-          "connectTimeMs": 179,
-          "sslHandshakeMs": 1155,
-          "ttfbMs": 1742,
-          "downloadSpeedBps": 3180,
-          "downloadSizeBytes": 5575,
-          "reason": "HTTP 403"
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Tumblr",
@@ -668,13 +668,13 @@
           "url": "https://medium.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
+          "totalLatencyMs": 2502,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Amazon",
@@ -689,7 +689,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "eBay",
@@ -698,10 +698,10 @@
           "url": "https://www.ebay.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
+          "totalLatencyMs": 2500,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 2500,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2500 milliseconds"
@@ -734,22 +734,22 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Booking.com",
           "domain": "booking.com",
           "category": "Travel / Hospitality",
           "url": "https://www.booking.com",
-          "ok": true,
-          "httpCode": 202,
-          "totalLatencyMs": 1785,
-          "connectTimeMs": 167,
-          "sslHandshakeMs": 1365,
-          "ttfbMs": 1785,
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": null
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Airbnb",
@@ -773,10 +773,10 @@
           "url": "https://www.aliexpress.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
+          "totalLatencyMs": 2500,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 2500,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2500 milliseconds"
@@ -786,30 +786,30 @@
           "domain": "shopify.com",
           "category": "E-Commerce",
           "url": "https://www.shopify.com",
-          "ok": true,
-          "httpCode": 200,
-          "totalLatencyMs": 2247,
-          "connectTimeMs": 160,
-          "sslHandshakeMs": 917,
-          "ttfbMs": 1260,
-          "downloadSpeedBps": 284492,
-          "downloadSizeBytes": 639360,
-          "reason": null
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "BBC",
           "domain": "bbc.com",
           "category": "News",
           "url": "https://www.bbc.com",
-          "ok": true,
-          "httpCode": 200,
-          "totalLatencyMs": 3501,
-          "connectTimeMs": 172,
-          "sslHandshakeMs": 1616,
-          "ttfbMs": 1950,
-          "downloadSpeedBps": 120333,
-          "downloadSizeBytes": 421230,
-          "reason": null
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "CNN",
@@ -824,7 +824,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "The New York Times",
@@ -846,15 +846,15 @@
           "domain": "theguardian.com",
           "category": "News",
           "url": "https://www.theguardian.com",
-          "ok": true,
-          "httpCode": 302,
-          "totalLatencyMs": 1564,
-          "connectTimeMs": 161,
-          "sslHandshakeMs": 1217,
-          "ttfbMs": 1564,
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": null
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Reuters",
@@ -878,10 +878,10 @@
           "url": "https://www.dropbox.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
@@ -893,10 +893,10 @@
           "url": "https://www.salesforce.com",
           "ok": true,
           "httpCode": 302,
-          "totalLatencyMs": 2778,
-          "connectTimeMs": 169,
-          "sslHandshakeMs": 1786,
-          "ttfbMs": 2778,
+          "totalLatencyMs": 2310,
+          "connectTimeMs": 251,
+          "sslHandshakeMs": 1517,
+          "ttfbMs": 2310,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": null
@@ -914,7 +914,7 @@
           "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Zoom",
@@ -936,57 +936,56 @@
     },
     {
       "proxy": {
-        "protocol": "socks5",
-        "ip": "199.66.182.232",
-        "port": 4145,
-        "country": "US",
-        "raw": "socks5://199.66.182.232:4145,US,Douglasville"
+        "protocol": "http",
+        "ip": "18.175.170.244",
+        "port": 50187,
+        "raw": "http://18.175.170.244:50187"
       },
       "status": "PASS",
-      "tier": "SLOW",
-      "compositeScore": 6,
+      "tier": "MODERATE",
+      "compositeScore": 7,
       "scoreBreakdown": {
-        "websites": 6,
-        "avgLatency": 0,
+        "websites": 5,
+        "avgLatency": 1,
         "minLatency": 0,
         "connectTime": 0,
         "ttfb": 0,
         "speed": 0,
         "anonymity": 10
       },
-      "exitIp": "199.66.182.232",
+      "exitIp": "18.175.170.244",
       "anonymity": "ELITE / ANONYMOUS",
       "endpointsTested": 1,
       "endpointsPassed": 1,
       "endpointsTotal": 11,
       "passRatePercent": 9.1,
       "websitesTested": 53,
-      "websitesPassed": 6,
+      "websitesPassed": 5,
       "websitesTotal": 53,
-      "websitePassRatePercent": 11.3,
-      "avgLatencyMs": 2745,
-      "minLatencyMs": 1920,
-      "maxLatencyMs": 3509,
-      "medianLatencyMs": 2679,
-      "avgConnectTimeMs": 404,
-      "avgTtfbMs": 2312,
-      "avgSpeedBps": 13968,
+      "websitePassRatePercent": 9.4,
+      "avgLatencyMs": 1100,
+      "minLatencyMs": 582,
+      "maxLatencyMs": 1654,
+      "medianLatencyMs": 1090,
+      "avgConnectTimeMs": 651,
+      "avgTtfbMs": 1094,
+      "avgSpeedBps": 356,
       "firstFailedEndpoint": null,
       "failureReason": null,
       "endpointDetails": [
         {
           "name": "api.ipify.org",
           "url": "https://api.ipify.org",
-          "resolvedIp": "104.26.12.205",
+          "resolvedIp": "172.67.74.152",
           "ok": true,
           "httpCode": 200,
-          "totalLatencyMs": 1920,
-          "connectTimeMs": 253,
-          "sslHandshakeMs": 1376,
-          "ttfbMs": 1920,
-          "downloadSpeedBps": 7,
+          "totalLatencyMs": 1654,
+          "connectTimeMs": 1184,
+          "sslHandshakeMs": 1486,
+          "ttfbMs": 1651,
+          "downloadSpeedBps": 8,
           "downloadSizeBytes": 14,
-          "returnedIp": "199.66.182.232",
+          "returnedIp": "18.175.170.244",
           "reason": null
         }
       ],
@@ -996,15 +995,15 @@
           "domain": "google.com",
           "category": "Search / Infra",
           "url": "https://www.google.com/generate_204",
-          "ok": true,
-          "httpCode": 204,
-          "totalLatencyMs": 2679,
-          "connectTimeMs": 253,
-          "sslHandshakeMs": 2137,
-          "ttfbMs": 2679,
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 255,
+          "connectTimeMs": 128,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 255,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": null
+          "reason": "curl: (7) CONNECT tunnel failed, response 400"
         },
         {
           "name": "Cloudflare",
@@ -1013,12 +1012,12 @@
           "url": "https://www.cloudflare.com/favicon.ico",
           "ok": true,
           "httpCode": 200,
-          "totalLatencyMs": 2228,
-          "connectTimeMs": 252,
-          "sslHandshakeMs": 1364,
-          "ttfbMs": 1999,
-          "downloadSpeedBps": 407,
-          "downloadSizeBytes": 908,
+          "totalLatencyMs": 593,
+          "connectTimeMs": 131,
+          "sslHandshakeMs": 443,
+          "ttfbMs": 570,
+          "downloadSpeedBps": 590,
+          "downloadSizeBytes": 350,
           "reason": null
         },
         {
@@ -1026,30 +1025,30 @@
           "domain": "1.1.1.1",
           "category": "DNS / Infra",
           "url": "https://1.1.1.1/cdn-cgi/trace",
-          "ok": true,
-          "httpCode": 200,
-          "totalLatencyMs": 3027,
-          "connectTimeMs": 1297,
-          "sslHandshakeMs": 2464,
-          "ttfbMs": 3027,
-          "downloadSpeedBps": 98,
-          "downloadSizeBytes": 299,
-          "reason": null
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 243,
+          "connectTimeMs": 123,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 243,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (7) CONNECT tunnel failed, response 400"
         },
         {
           "name": "Microsoft",
           "domain": "microsoft.com",
           "category": "Search / Tech",
           "url": "https://www.microsoft.com",
-          "ok": true,
-          "httpCode": 200,
-          "totalLatencyMs": 3363,
-          "connectTimeMs": 265,
-          "sslHandshakeMs": 1609,
-          "ttfbMs": 2298,
-          "downloadSpeedBps": 59844,
-          "downloadSizeBytes": 201253,
-          "reason": null
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Apple",
@@ -1058,12 +1057,12 @@
           "url": "https://www.apple.com",
           "ok": true,
           "httpCode": 200,
-          "totalLatencyMs": 3509,
-          "connectTimeMs": 254,
-          "sslHandshakeMs": 1480,
-          "ttfbMs": 2097,
-          "downloadSpeedBps": 23213,
-          "downloadSizeBytes": 81440,
+          "totalLatencyMs": 582,
+          "connectTimeMs": 133,
+          "sslHandshakeMs": 441,
+          "ttfbMs": 582,
+          "downloadSpeedBps": 575,
+          "downloadSizeBytes": 335,
           "reason": null
         },
         {
@@ -1073,13 +1072,13 @@
           "url": "https://www.bing.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 1870,
-          "connectTimeMs": 1295,
+          "totalLatencyMs": 2502,
+          "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 1870,
+          "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (97) cannot complete SOCKS5 connection to www.bing.com. (4)"
+          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
         },
         {
           "name": "DuckDuckGo",
@@ -1094,7 +1093,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Yahoo",
@@ -1103,13 +1102,13 @@
           "url": "https://www.yahoo.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2503,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 2320,
+          "connectTimeMs": 2195,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
+          "ttfbMs": 2320,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "GitHub",
@@ -1118,13 +1117,13 @@
           "url": "https://github.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2503,
+          "totalLatencyMs": 2502,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
+          "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "GitLab",
@@ -1148,13 +1147,13 @@
           "url": "https://stackoverflow.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2503,
+          "totalLatencyMs": 2500,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
+          "ttfbMs": 2500,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "NPM Registry",
@@ -1163,28 +1162,28 @@
           "url": "https://registry.npmjs.org",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2504,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2504,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2504 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Docker Hub",
           "domain": "docker.com",
           "category": "Developer",
           "url": "https://hub.docker.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2502,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 625,
+          "connectTimeMs": 144,
+          "sslHandshakeMs": 481,
+          "ttfbMs": 619,
+          "downloadSpeedBps": 537,
+          "downloadSizeBytes": 336,
+          "reason": null
         },
         {
           "name": "Mozilla MDN",
@@ -1193,28 +1192,28 @@
           "url": "https://developer.mozilla.org",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2508,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2508,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2507 milliseconds"
         },
         {
           "name": "Bitbucket",
           "domain": "bitbucket.org",
           "category": "Developer",
           "url": "https://bitbucket.org",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2503,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 1555,
+          "connectTimeMs": 1147,
+          "sslHandshakeMs": 1423,
+          "ttfbMs": 1554,
+          "downloadSpeedBps": 214,
+          "downloadSizeBytes": 334,
+          "reason": null
         },
         {
           "name": "CDNJS",
@@ -1223,13 +1222,13 @@
           "url": "https://cdnjs.cloudflare.com/robots.txt",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2504,
+          "totalLatencyMs": 2508,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2504,
+          "ttfbMs": 2508,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2504 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2507 milliseconds"
         },
         {
           "name": "OpenAI",
@@ -1238,13 +1237,13 @@
           "url": "https://openai.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2511,
+          "totalLatencyMs": 2505,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2511,
+          "ttfbMs": 2505,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2511 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2504 milliseconds"
         },
         {
           "name": "Hugging Face",
@@ -1253,13 +1252,13 @@
           "url": "https://huggingface.co",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2504,
+          "totalLatencyMs": 2502,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2504,
+          "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "YouTube",
@@ -1268,13 +1267,13 @@
           "url": "https://www.youtube.com/generate_204",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 1796,
-          "connectTimeMs": 1262,
+          "totalLatencyMs": 2503,
+          "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 1796,
+          "ttfbMs": 2503,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (97) cannot complete SOCKS5 connection to www.youtube.com. (4)"
+          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
         },
         {
           "name": "Netflix",
@@ -1283,13 +1282,13 @@
           "url": "https://www.netflix.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Spotify",
@@ -1313,13 +1312,13 @@
           "url": "https://www.twitch.tv",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Vimeo",
@@ -1328,13 +1327,13 @@
           "url": "https://vimeo.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2500,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2500,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "SoundCloud",
@@ -1343,28 +1342,28 @@
           "url": "https://soundcloud.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
-        },
-        {
-          "name": "Reddit",
-          "domain": "reddit.com",
-          "category": "Social / Community",
-          "url": "https://www.reddit.com",
-          "ok": false,
-          "httpCode": 0,
           "totalLatencyMs": 2502,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
           "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+        },
+        {
+          "name": "Reddit",
+          "domain": "reddit.com",
+          "category": "Social / Community",
+          "url": "https://www.reddit.com",
+          "ok": true,
+          "httpCode": 200,
+          "totalLatencyMs": 1589,
+          "connectTimeMs": 1164,
+          "sslHandshakeMs": 1447,
+          "ttfbMs": 1585,
+          "downloadSpeedBps": 210,
+          "downloadSizeBytes": 335,
+          "reason": null
         },
         {
           "name": "Wikipedia",
@@ -1373,28 +1372,28 @@
           "url": "https://en.wikipedia.org",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2509,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 283,
+          "connectTimeMs": 143,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 283,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "X / Twitter",
           "domain": "x.com",
           "category": "Social Media",
           "url": "https://x.com",
-          "ok": true,
-          "httpCode": 200,
-          "totalLatencyMs": 2487,
-          "connectTimeMs": 254,
-          "sslHandshakeMs": 1371,
-          "ttfbMs": 2164,
-          "downloadSpeedBps": 14206,
-          "downloadSizeBytes": 35327,
-          "reason": null
+          "ok": false,
+          "httpCode": 0,
+          "totalLatencyMs": 1276,
+          "connectTimeMs": 1140,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 1276,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "LinkedIn",
@@ -1403,13 +1402,13 @@
           "url": "https://www.linkedin.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 1259,
+          "connectTimeMs": 1132,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 1259,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "Instagram",
@@ -1418,13 +1417,13 @@
           "url": "https://www.instagram.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 2327,
+          "connectTimeMs": 2199,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2327,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "Discord",
@@ -1469,7 +1468,7 @@
           "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Pinterest",
@@ -1478,13 +1477,13 @@
           "url": "https://www.pinterest.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Quora",
@@ -1499,7 +1498,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Tumblr",
@@ -1508,10 +1507,10 @@
           "url": "https://www.tumblr.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
@@ -1559,7 +1558,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "PayPal",
@@ -1574,7 +1573,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Stripe",
@@ -1583,6 +1582,21 @@
           "url": "https://stripe.com",
           "ok": false,
           "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+        },
+        {
+          "name": "Booking.com",
+          "domain": "booking.com",
+          "category": "Travel / Hospitality",
+          "url": "https://www.booking.com",
+          "ok": false,
+          "httpCode": 0,
           "totalLatencyMs": 2502,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
@@ -1592,10 +1606,10 @@
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
-          "name": "Booking.com",
-          "domain": "booking.com",
+          "name": "Airbnb",
+          "domain": "airbnb.com",
           "category": "Travel / Hospitality",
-          "url": "https://www.booking.com",
+          "url": "https://www.airbnb.com",
           "ok": false,
           "httpCode": 0,
           "totalLatencyMs": 2501,
@@ -1607,10 +1621,10 @@
           "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
-          "name": "Airbnb",
-          "domain": "airbnb.com",
-          "category": "Travel / Hospitality",
-          "url": "https://www.airbnb.com",
+          "name": "AliExpress",
+          "domain": "aliexpress.com",
+          "category": "E-Commerce",
+          "url": "https://www.aliexpress.com",
           "ok": false,
           "httpCode": 0,
           "totalLatencyMs": 2502,
@@ -1619,22 +1633,7 @@
           "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
-        },
-        {
-          "name": "AliExpress",
-          "domain": "aliexpress.com",
-          "category": "E-Commerce",
-          "url": "https://www.aliexpress.com",
-          "ok": false,
-          "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
-          "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
-          "downloadSpeedBps": 0,
-          "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
         },
         {
           "name": "Shopify",
@@ -1673,10 +1672,10 @@
           "url": "https://www.cnn.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
@@ -1694,7 +1693,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "The Guardian",
@@ -1703,13 +1702,13 @@
           "url": "https://www.theguardian.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2503,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2503 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Reuters",
@@ -1718,13 +1717,13 @@
           "url": "https://www.reuters.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Dropbox",
@@ -1733,13 +1732,13 @@
           "url": "https://www.dropbox.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2503,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 1275,
+          "connectTimeMs": 1143,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
+          "ttfbMs": 1275,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "Salesforce",
@@ -1748,13 +1747,13 @@
           "url": "https://www.salesforce.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 1259,
+          "connectTimeMs": 1132,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 1259,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "Adobe",
@@ -1763,13 +1762,13 @@
           "url": "https://www.adobe.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 1252,
+          "connectTimeMs": 1127,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 1252,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         },
         {
           "name": "Zoom",
@@ -1778,13 +1777,13 @@
           "url": "https://zoom.us",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 0,
+          "totalLatencyMs": 249,
+          "connectTimeMs": 124,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2501,
+          "ttfbMs": 249,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (56) Recv failure: Connection reset by peer"
         }
       ],
       "rank": 2
@@ -1819,27 +1818,27 @@
       "websitesPassed": 0,
       "websitesTotal": 53,
       "websitePassRatePercent": 0,
-      "avgLatencyMs": 1955,
-      "minLatencyMs": 1955,
-      "maxLatencyMs": 1955,
-      "medianLatencyMs": 1955,
-      "avgConnectTimeMs": 257,
-      "avgTtfbMs": 1955,
-      "avgSpeedBps": 7,
+      "avgLatencyMs": 2139,
+      "minLatencyMs": 2139,
+      "maxLatencyMs": 2139,
+      "medianLatencyMs": 2139,
+      "avgConnectTimeMs": 271,
+      "avgTtfbMs": 2139,
+      "avgSpeedBps": 6,
       "firstFailedEndpoint": null,
       "failureReason": null,
       "endpointDetails": [
         {
-          "name": "api.ipify.org",
-          "url": "https://api.ipify.org",
-          "resolvedIp": "104.26.12.205",
+          "name": "api64.ipify.org",
+          "url": "https://api64.ipify.org",
+          "resolvedIp": "104.237.62.213",
           "ok": true,
           "httpCode": 200,
-          "totalLatencyMs": 1955,
-          "connectTimeMs": 257,
-          "sslHandshakeMs": 1400,
-          "ttfbMs": 1955,
-          "downloadSpeedBps": 7,
+          "totalLatencyMs": 2139,
+          "connectTimeMs": 271,
+          "sslHandshakeMs": 1552,
+          "ttfbMs": 2139,
+          "downloadSpeedBps": 6,
           "downloadSizeBytes": 14,
           "returnedIp": "199.66.182.243",
           "reason": null
@@ -1853,13 +1852,13 @@
           "url": "https://www.google.com/generate_204",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2500,
+          "totalLatencyMs": 2502,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2500,
+          "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Cloudflare",
@@ -1868,13 +1867,13 @@
           "url": "https://www.cloudflare.com/favicon.ico",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2508,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2508,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2507 milliseconds"
         },
         {
           "name": "Cloudflare DNS",
@@ -1883,13 +1882,13 @@
           "url": "https://1.1.1.1/cdn-cgi/trace",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2500,
+          "totalLatencyMs": 2506,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2500,
+          "ttfbMs": 2506,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2506 milliseconds"
         },
         {
           "name": "Microsoft",
@@ -1898,13 +1897,13 @@
           "url": "https://www.microsoft.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2505,
+          "totalLatencyMs": 2504,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2505,
+          "ttfbMs": 2504,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2504 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2503 milliseconds"
         },
         {
           "name": "Apple",
@@ -1913,13 +1912,13 @@
           "url": "https://www.apple.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2501,
-          "connectTimeMs": 1261,
-          "sslHandshakeMs": 2501,
-          "ttfbMs": 2501,
+          "totalLatencyMs": 2504,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2503,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Operation timed out after 2501 milliseconds with 0 bytes received"
+          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
         },
         {
           "name": "Bing",
@@ -1928,13 +1927,13 @@
           "url": "https://www.bing.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 1771,
-          "connectTimeMs": 1260,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 1771,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (97) cannot complete SOCKS5 connection to www.bing.com. (4)"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "DuckDuckGo",
@@ -1943,13 +1942,13 @@
           "url": "https://duckduckgo.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2503,
+          "totalLatencyMs": 2502,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
+          "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2503 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Yahoo",
@@ -1973,13 +1972,13 @@
           "url": "https://github.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2504,
+          "totalLatencyMs": 2500,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2504,
+          "ttfbMs": 2500,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2504 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "GitLab",
@@ -1994,7 +1993,7 @@
           "ttfbMs": 2502,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
         },
         {
           "name": "Stack Overflow",
@@ -2003,13 +2002,13 @@
           "url": "https://stackoverflow.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2506,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2506,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2506 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "NPM Registry",
@@ -2018,10 +2017,10 @@
           "url": "https://registry.npmjs.org",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
@@ -2033,13 +2032,13 @@
           "url": "https://hub.docker.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2503,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2503,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2502 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Mozilla MDN",
@@ -2054,7 +2053,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Bitbucket",
@@ -2069,7 +2068,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "CDNJS",
@@ -2078,10 +2077,10 @@
           "url": "https://cdnjs.cloudflare.com/robots.txt",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
           "reason": "curl: (28) Connection timed out after 2501 milliseconds"
@@ -2099,7 +2098,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         },
         {
           "name": "Hugging Face",
@@ -2114,7 +2113,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "YouTube",
@@ -2129,7 +2128,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Netflix",
@@ -2159,7 +2158,7 @@
           "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Twitch",
@@ -2198,13 +2197,13 @@
           "url": "https://soundcloud.com",
           "ok": false,
           "httpCode": 0,
-          "totalLatencyMs": 2502,
+          "totalLatencyMs": 2501,
           "connectTimeMs": 0,
           "sslHandshakeMs": 0,
-          "ttfbMs": 2502,
+          "ttfbMs": 2501,
           "downloadSpeedBps": 0,
           "downloadSizeBytes": 0,
-          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
+          "reason": "curl: (28) Connection timed out after 2500 milliseconds"
         },
         {
           "name": "Reddit",
@@ -2212,14 +2211,14 @@
           "category": "Social / Community",
           "url": "https://www.reddit.com",
           "ok": false,
-          "httpCode": 403,
-          "totalLatencyMs": 2752,
-          "connectTimeMs": 1275,
-          "sslHandshakeMs": 2446,
-          "ttfbMs": 2752,
-          "downloadSpeedBps": 553,
-          "downloadSizeBytes": 1522,
-          "reason": "HTTP 403"
+          "httpCode": 0,
+          "totalLatencyMs": 2501,
+          "connectTimeMs": 0,
+          "sslHandshakeMs": 0,
+          "ttfbMs": 2501,
+          "downloadSpeedBps": 0,
+          "downloadSizeBytes": 0,
+          "reason": "curl: (28) Connection timed out after 2501 milliseconds"
         }
       ],
       "rank": 3
