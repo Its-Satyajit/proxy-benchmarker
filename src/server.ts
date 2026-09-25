@@ -32,23 +32,33 @@ function hasManualTriggerKey(request: http.IncomingMessage): boolean {
     return providedKey.length === expectedKey.length && timingSafeEqual(providedKey, expectedKey);
 }
 
-const server = http.createServer(async (req, res) => {
-    if (req.url === "/" || req.url === "/health") {
-        sendJson(res, 200, {
-            status: "OK",
-            service: "proxy-benchmarker-bullmq",
-            queue: queueState,
-            timestamp: new Date().toISOString(),
+async function startQueue(): Promise<void> {
+    try {
+        const runtime = await startBullMq({
+            onError: () => {
+                queueState = "error";
+            },
+            onReady: () => {
+                if (queueRuntime) queueState = "ready";
+            },
         });
-        return;
+        queueRuntime = runtime;
+        queueState = "ready";
+    } catch (error) {
+        queueState = "error";
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[bullmq] startup failed: ${message}`);
     }
+}
 
-    if (req.url === "/ready") {
-        const ready = queueState === "ready";
+const server = http.createServer(async (req, res) => {
+    const ready = queueState === "ready";
+    if (req.url === "/" || req.url === "/health" || req.url === "/ready") {
         sendJson(res, ready ? 200 : 503, {
             status: ready ? "OK" : "NOT_READY",
             service: "proxy-benchmarker-bullmq",
             queue: queueState,
+            timestamp: new Date().toISOString(),
         });
         return;
     }
@@ -113,17 +123,7 @@ server.listen(port, "0.0.0.0", () => {
     console.log(`[server] BullMQ worker listening on http://0.0.0.0:${port}`);
     console.log(`[server] Health check: http://0.0.0.0:${port}/health`);
     console.log(`[server] Readiness check: http://0.0.0.0:${port}/ready`);
-
-    void startBullMq()
-        .then((runtime) => {
-            queueRuntime = runtime;
-            queueState = "ready";
-        })
-        .catch((error: unknown) => {
-            queueState = "error";
-            const message = error instanceof Error ? error.message : String(error);
-            console.error(`[bullmq] startup failed: ${message}`);
-        });
+    void startQueue();
 });
 
 process.once("SIGTERM", () => void shutdown("SIGTERM"));

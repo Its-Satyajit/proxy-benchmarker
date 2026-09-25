@@ -14,7 +14,7 @@ RUN npm install
 # Copy application source
 COPY . .
 
-# Build standalone runner bundle and Inngest server
+# Build standalone runner bundle and BullMQ worker server
 RUN npm run build
 
 # Expose HTTP port for Railway health checks and Inngest endpoints
@@ -22,5 +22,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# Start Inngest worker server
+# Start BullMQ worker server
 CMD ["node", "dist/server.js"]

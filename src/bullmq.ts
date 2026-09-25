@@ -6,6 +6,7 @@ export const PROXY_QUEUE_NAME = "proxy-benchmark";
 const SCHEDULER_ID = "proxy-benchmark-hourly";
 // BullMQ cron fields are: seconds, minutes, hours, day, month, weekday.
 const DEFAULT_CRON = "0 0 * * * *";
+const DEFAULT_QUEUE_PREFIX = "proxy-benchmarker";
 const BENCHMARK_JOB_OPTIONS: JobsOptions = {
     attempts: 2,
     backoff: { type: "exponential", delay: 60_000 },
@@ -24,6 +25,15 @@ export interface BullMqRuntime {
     queue: Queue<BenchmarkJobData, BenchmarkJobResult>;
     worker: Worker<BenchmarkJobData, BenchmarkJobResult>;
     close: () => Promise<void>;
+}
+
+export interface BullMqStartOptions {
+    onError?: (error: Error) => void;
+    onReady?: () => void;
+}
+
+function normalizedError(error: unknown): Error {
+    return error instanceof Error ? error : new Error(String(error));
 }
 
 function redisConnection(): ConnectionOptions {
@@ -51,22 +61,38 @@ function redisConnection(): ConnectionOptions {
     };
 }
 
-function cronPattern(): string {
-    const configured = process.env.BULLMQ_CRON?.trim() || DEFAULT_CRON;
-    const fields = configured.split(/\s+/);
-    return fields.length === 5 ? `0 ${configured}` : configured;
+function queuePrefix(): string {
+    return process.env.BULLMQ_PREFIX?.trim() || DEFAULT_QUEUE_PREFIX;
 }
 
-export async function startBullMq(): Promise<BullMqRuntime> {
+function cronPattern(): string {
+    const configured =
+        process.env.BULLMQ_CRON?.trim() || process.env.CRON?.trim() || DEFAULT_CRON;
+    const fields = configured.split(/\s+/);
+    if (fields.length === 5) return `0 ${configured}`;
+    if (fields.length !== 6) {
+        throw new Error("BULLMQ_CRON must have five or six cron fields.");
+    }
+    return configured;
+}
+
+export async function startBullMq(options: BullMqStartOptions = {}): Promise<BullMqRuntime> {
     const connection = redisConnection();
+    const prefix = queuePrefix();
     const queue = new Queue<BenchmarkJobData, BenchmarkJobResult>(PROXY_QUEUE_NAME, {
         connection,
+        prefix,
     });
     const worker = new Worker<BenchmarkJobData, BenchmarkJobResult>(
         PROXY_QUEUE_NAME,
         async () => runProxyBenchmarkJob(),
-        { connection, concurrency: 1 }
+        { connection, prefix, concurrency: 1 }
     );
+    const reportError = (error: unknown) => {
+        const normalized = normalizedError(error);
+        console.error(`[bullmq] connection error: ${normalized.message}`);
+        options.onError?.(normalized);
+    };
 
     worker.on("completed", (job) => {
         console.log(`[bullmq] benchmark job ${job.id} completed`);
@@ -74,15 +100,13 @@ export async function startBullMq(): Promise<BullMqRuntime> {
     worker.on("failed", (job, error) => {
         console.error(`[bullmq] benchmark job ${job?.id ?? "unknown"} failed: ${error.message}`);
     });
-    worker.on("error", (error) => {
-        console.error(`[bullmq] worker error: ${error.message}`);
-    });
-    queue.on("error", (error) => {
-        console.error(`[bullmq] queue error: ${error.message}`);
-    });
+    worker.on("error", reportError);
+    worker.on("ready", () => options.onReady?.());
+    queue.on("error", reportError);
 
     try {
-        await queue.waitUntilReady();
+        await Promise.all([queue.waitUntilReady(), worker.waitUntilReady()]);
+        await queue.setGlobalConcurrency(1);
         const pattern = cronPattern();
         await queue.removeJobScheduler(SCHEDULER_ID);
         await queue.upsertJobScheduler(

@@ -30,6 +30,7 @@ export interface PagesResult {
     reason?: string;
     status?: string;
     branch?: string;
+    workflow?: string;
     error?: string;
 }
 
@@ -37,11 +38,29 @@ function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
+function isNotFound(error: unknown): boolean {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        (error as { status?: unknown }).status === 404
+    );
+}
+
 function githubRepository() {
     return {
         owner: process.env.GITHUB_OWNER || "Its-Satyajit",
         repo: process.env.GITHUB_REPO || "proxy-benchmarker",
         branch: process.env.GITHUB_BRANCH || "master",
+    };
+}
+
+function githubApiHeaders(token: string): Record<string, string> {
+    return {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "proxy-benchmarker",
     };
 }
 
@@ -74,7 +93,7 @@ export async function syncProxyFiles(shouldPublish: boolean): Promise<CommitResu
 
     const token = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
     if (!token) {
-        return { skipped: true, reason: "No GITHUB_TOKEN or GITHUB_PAT configured." };
+        throw new Error("GITHUB_TOKEN or GITHUB_PAT is required when proxies pass.");
     }
 
     const { owner, repo, branch } = githubRepository();
@@ -105,8 +124,10 @@ export async function syncProxyFiles(shouldPublish: boolean): Promise<CommitResu
                 if (!Array.isArray(data) && data.sha) {
                     sha = data.sha;
                 }
-            } catch {
-                // The file may not exist yet.
+            } catch (error) {
+                if (!isNotFound(error)) {
+                    throw new Error(`GitHub content lookup failed for ${file}: ${errorMessage(error)}`);
+                }
             }
 
             await octokit.repos.createOrUpdateFileContents({
@@ -120,7 +141,7 @@ export async function syncProxyFiles(shouldPublish: boolean): Promise<CommitResu
             });
             results[file] = "synced";
         } catch (error) {
-            results[file] = `failed: ${errorMessage(error)}`;
+            throw new Error(`GitHub sync failed for ${file}: ${errorMessage(error)}`);
         }
     }
 
@@ -134,45 +155,38 @@ export async function deployReport(shouldPublish: boolean): Promise<PagesResult>
 
     const token = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
     if (!token) {
-        return { skipped: true, reason: "No GITHUB_TOKEN or GITHUB_PAT configured." };
+        throw new Error("GITHUB_TOKEN or GITHUB_PAT is required when proxies pass.");
     }
 
-    const { owner, repo } = githubRepository();
-    const octokit = new Octokit({ auth: token });
-    const htmlPath = path.resolve(process.cwd(), "benchmark-report.html");
-
-    try {
-        const htmlContent = await fs.readFile(htmlPath, "utf8");
-        let sha: string | undefined;
-
-        try {
-            const { data } = await octokit.repos.getContent({
-                owner,
-                repo,
-                path: "index.html",
-                ref: "gh-pages",
-            });
-            if (!Array.isArray(data) && data.sha) {
-                sha = data.sha;
-            }
-        } catch {
-            // The report branch or file may not exist yet.
+    const { owner, repo, branch } = githubRepository();
+    const workflow = process.env.GITHUB_PAGES_WORKFLOW || "update-proxies.yml";
+    const response = await fetch(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+            repo
+        )}/actions/workflows/${encodeURIComponent(workflow)}/dispatches`,
+        {
+            method: "POST",
+            headers: {
+                ...githubApiHeaders(token),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                ref: process.env.GITHUB_PAGES_REF || branch,
+                inputs: { deploy_only: true },
+            }),
         }
+    );
 
-        await octokit.repos.createOrUpdateFileContents({
-            owner,
-            repo,
-            path: "index.html",
-            branch: "gh-pages",
-            message: "deploy: update GitHub Pages report via BullMQ [skip ci]",
-            content: Buffer.from(htmlContent).toString("base64"),
-            sha,
-        });
-
-        return { status: "deployed", branch: "gh-pages" };
-    } catch (error) {
-        return { status: "failed", error: errorMessage(error) };
+    if (!response.ok) {
+        const body = (await response.text()).slice(0, 500);
+        throw new Error(`GitHub Pages workflow dispatch failed (${response.status}): ${body}`);
     }
+
+    return {
+        status: "dispatched",
+        branch: process.env.GITHUB_PAGES_REF || branch,
+        workflow,
+    };
 }
 
 export async function runProxyBenchmarkJob() {

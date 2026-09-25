@@ -19,11 +19,22 @@ var EMPTY_RESULT_REASON = "Benchmark produced no verified proxies; existing list
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
+function isNotFound(error) {
+  return typeof error === "object" && error !== null && "status" in error && error.status === 404;
+}
 function githubRepository() {
   return {
     owner: process.env.GITHUB_OWNER || "Its-Satyajit",
     repo: process.env.GITHUB_REPO || "proxy-benchmarker",
     branch: process.env.GITHUB_BRANCH || "master"
+  };
+}
+function githubApiHeaders(token) {
+  return {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${token}`,
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "proxy-benchmarker"
   };
 }
 async function executeBenchmark() {
@@ -51,7 +62,7 @@ async function syncProxyFiles(shouldPublish) {
   }
   const token = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
   if (!token) {
-    return { skipped: true, reason: "No GITHUB_TOKEN or GITHUB_PAT configured." };
+    throw new Error("GITHUB_TOKEN or GITHUB_PAT is required when proxies pass.");
   }
   const { owner, repo, branch } = githubRepository();
   const octokit = new Octokit({ auth: token });
@@ -79,7 +90,10 @@ async function syncProxyFiles(shouldPublish) {
         if (!Array.isArray(data) && data.sha) {
           sha = data.sha;
         }
-      } catch {
+      } catch (error) {
+        if (!isNotFound(error)) {
+          throw new Error(`GitHub content lookup failed for ${file}: ${errorMessage(error)}`);
+        }
       }
       await octokit.repos.createOrUpdateFileContents({
         owner,
@@ -92,7 +106,7 @@ async function syncProxyFiles(shouldPublish) {
       });
       results[file] = "synced";
     } catch (error) {
-      results[file] = `failed: ${errorMessage(error)}`;
+      throw new Error(`GitHub sync failed for ${file}: ${errorMessage(error)}`);
     }
   }
   return { owner, repo, branch, results };
@@ -103,39 +117,35 @@ async function deployReport(shouldPublish) {
   }
   const token = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
   if (!token) {
-    return { skipped: true, reason: "No GITHUB_TOKEN or GITHUB_PAT configured." };
+    throw new Error("GITHUB_TOKEN or GITHUB_PAT is required when proxies pass.");
   }
-  const { owner, repo } = githubRepository();
-  const octokit = new Octokit({ auth: token });
-  const htmlPath = path.resolve(process.cwd(), "benchmark-report.html");
-  try {
-    const htmlContent = await fs.readFile(htmlPath, "utf8");
-    let sha;
-    try {
-      const { data } = await octokit.repos.getContent({
-        owner,
-        repo,
-        path: "index.html",
-        ref: "gh-pages"
-      });
-      if (!Array.isArray(data) && data.sha) {
-        sha = data.sha;
-      }
-    } catch {
+  const { owner, repo, branch } = githubRepository();
+  const workflow = process.env.GITHUB_PAGES_WORKFLOW || "update-proxies.yml";
+  const response = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+      repo
+    )}/actions/workflows/${encodeURIComponent(workflow)}/dispatches`,
+    {
+      method: "POST",
+      headers: {
+        ...githubApiHeaders(token),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        ref: process.env.GITHUB_PAGES_REF || branch,
+        inputs: { deploy_only: true }
+      })
     }
-    await octokit.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: "index.html",
-      branch: "gh-pages",
-      message: "deploy: update GitHub Pages report via BullMQ [skip ci]",
-      content: Buffer.from(htmlContent).toString("base64"),
-      sha
-    });
-    return { status: "deployed", branch: "gh-pages" };
-  } catch (error) {
-    return { status: "failed", error: errorMessage(error) };
+  );
+  if (!response.ok) {
+    const body = (await response.text()).slice(0, 500);
+    throw new Error(`GitHub Pages workflow dispatch failed (${response.status}): ${body}`);
   }
+  return {
+    status: "dispatched",
+    branch: process.env.GITHUB_PAGES_REF || branch,
+    workflow
+  };
 }
 async function runProxyBenchmarkJob() {
   const stats = await executeBenchmark();
@@ -149,12 +159,16 @@ async function runProxyBenchmarkJob() {
 var PROXY_QUEUE_NAME = "proxy-benchmark";
 var SCHEDULER_ID = "proxy-benchmark-hourly";
 var DEFAULT_CRON = "0 0 * * * *";
+var DEFAULT_QUEUE_PREFIX = "proxy-benchmarker";
 var BENCHMARK_JOB_OPTIONS = {
   attempts: 2,
   backoff: { type: "exponential", delay: 6e4 },
   removeOnComplete: 10,
   removeOnFail: 50
 };
+function normalizedError(error) {
+  return error instanceof Error ? error : new Error(String(error));
+}
 function redisConnection() {
   const url = process2.env.REDIS_URL?.trim();
   if (url) {
@@ -176,35 +190,47 @@ function redisConnection() {
     connectTimeout: 1e4
   };
 }
-function cronPattern() {
-  const configured = process2.env.BULLMQ_CRON?.trim() || DEFAULT_CRON;
-  const fields = configured.split(/\s+/);
-  return fields.length === 5 ? `0 ${configured}` : configured;
+function queuePrefix() {
+  return process2.env.BULLMQ_PREFIX?.trim() || DEFAULT_QUEUE_PREFIX;
 }
-async function startBullMq() {
+function cronPattern() {
+  const configured = process2.env.BULLMQ_CRON?.trim() || process2.env.CRON?.trim() || DEFAULT_CRON;
+  const fields = configured.split(/\s+/);
+  if (fields.length === 5) return `0 ${configured}`;
+  if (fields.length !== 6) {
+    throw new Error("BULLMQ_CRON must have five or six cron fields.");
+  }
+  return configured;
+}
+async function startBullMq(options = {}) {
   const connection = redisConnection();
+  const prefix = queuePrefix();
   const queue = new Queue(PROXY_QUEUE_NAME, {
-    connection
+    connection,
+    prefix
   });
   const worker = new Worker(
     PROXY_QUEUE_NAME,
     async () => runProxyBenchmarkJob(),
-    { connection, concurrency: 1 }
+    { connection, prefix, concurrency: 1 }
   );
+  const reportError = (error) => {
+    const normalized = normalizedError(error);
+    console.error(`[bullmq] connection error: ${normalized.message}`);
+    options.onError?.(normalized);
+  };
   worker.on("completed", (job) => {
     console.log(`[bullmq] benchmark job ${job.id} completed`);
   });
   worker.on("failed", (job, error) => {
     console.error(`[bullmq] benchmark job ${job?.id ?? "unknown"} failed: ${error.message}`);
   });
-  worker.on("error", (error) => {
-    console.error(`[bullmq] worker error: ${error.message}`);
-  });
-  queue.on("error", (error) => {
-    console.error(`[bullmq] queue error: ${error.message}`);
-  });
+  worker.on("error", reportError);
+  worker.on("ready", () => options.onReady?.());
+  queue.on("error", reportError);
   try {
-    await queue.waitUntilReady();
+    await Promise.all([queue.waitUntilReady(), worker.waitUntilReady()]);
+    await queue.setGlobalConcurrency(1);
     const pattern = cronPattern();
     await queue.removeJobScheduler(SCHEDULER_ID);
     await queue.upsertJobScheduler(
@@ -258,22 +284,32 @@ function hasManualTriggerKey(request) {
   const expectedKey = Buffer.from(configuredKey);
   return providedKey.length === expectedKey.length && timingSafeEqual(providedKey, expectedKey);
 }
-var server = http.createServer(async (req, res) => {
-  if (req.url === "/" || req.url === "/health") {
-    sendJson(res, 200, {
-      status: "OK",
-      service: "proxy-benchmarker-bullmq",
-      queue: queueState,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+async function startQueue() {
+  try {
+    const runtime = await startBullMq({
+      onError: () => {
+        queueState = "error";
+      },
+      onReady: () => {
+        if (queueRuntime) queueState = "ready";
+      }
     });
-    return;
+    queueRuntime = runtime;
+    queueState = "ready";
+  } catch (error) {
+    queueState = "error";
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[bullmq] startup failed: ${message}`);
   }
-  if (req.url === "/ready") {
-    const ready = queueState === "ready";
+}
+var server = http.createServer(async (req, res) => {
+  const ready = queueState === "ready";
+  if (req.url === "/" || req.url === "/health" || req.url === "/ready") {
     sendJson(res, ready ? 200 : 503, {
       status: ready ? "OK" : "NOT_READY",
       service: "proxy-benchmarker-bullmq",
-      queue: queueState
+      queue: queueState,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
     return;
   }
@@ -328,14 +364,7 @@ server.listen(port, "0.0.0.0", () => {
   console.log(`[server] BullMQ worker listening on http://0.0.0.0:${port}`);
   console.log(`[server] Health check: http://0.0.0.0:${port}/health`);
   console.log(`[server] Readiness check: http://0.0.0.0:${port}/ready`);
-  void startBullMq().then((runtime) => {
-    queueRuntime = runtime;
-    queueState = "ready";
-  }).catch((error) => {
-    queueState = "error";
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`[bullmq] startup failed: ${message}`);
-  });
+  void startQueue();
 });
 process3.once("SIGTERM", () => void shutdown("SIGTERM"));
 process3.once("SIGINT", () => void shutdown("SIGINT"));

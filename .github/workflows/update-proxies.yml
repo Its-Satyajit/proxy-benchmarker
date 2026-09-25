@@ -2,6 +2,12 @@ name: Update Proxies & Publish Report
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_only:
+        description: "Publish the existing benchmark report without running a new benchmark"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -23,10 +29,12 @@ jobs:
 
       # 1. Ultra-fast direct execution using pre-compiled bundle and pre-installed Node.js 20
       - name: Run benchmark in Turbo mode
+        if: ${{ !inputs.deploy_only }}
         run: node dist/proxy-benchmarker.min.mjs --turbo
 
       # 2. Push updated proxy lists & telemetry to master
       - name: Commit and push proxy lists
+        if: ${{ !inputs.deploy_only }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
