@@ -1,38 +1,78 @@
 import http from "node:http";
 import process from "node:process";
-import { serve } from "inngest/node";
-import { inngest } from "./inngest/client.js";
-import { updateProxiesCron } from "./inngest/functions.js";
+import { startBullMq, type BullMqRuntime } from "./bullmq.js";
 
-const inngestHandler = serve({
-    client: inngest,
-    functions: [updateProxiesCron],
-});
+type QueueState = "starting" | "ready" | "error";
 
-const server = http.createServer(async (req, res) => {
-    // Health check endpoint for Railway
+let queueState: QueueState = "starting";
+let queueRuntime: BullMqRuntime | undefined;
+let shuttingDown = false;
+
+function sendJson(
+    response: http.ServerResponse,
+    statusCode: number,
+    body: Record<string, unknown>
+): void {
+    response.writeHead(statusCode, { "Content-Type": "application/json" });
+    response.end(JSON.stringify(body));
+}
+
+const server = http.createServer((req, res) => {
     if (req.url === "/" || req.url === "/health") {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({
+        sendJson(res, 200, {
             status: "OK",
-            service: "proxy-benchmarker-inngest",
+            service: "proxy-benchmarker-bullmq",
+            queue: queueState,
             timestamp: new Date().toISOString(),
-        }));
+        });
         return;
     }
 
-    // Inngest webhook endpoint
-    if (req.url?.startsWith("/api/inngest")) {
-        return inngestHandler(req, res);
+    if (req.url === "/ready") {
+        const ready = queueState === "ready";
+        sendJson(res, ready ? 200 : 503, {
+            status: ready ? "OK" : "NOT_READY",
+            service: "proxy-benchmarker-bullmq",
+            queue: queueState,
+        });
+        return;
     }
 
     res.writeHead(404, { "Content-Type": "text/plain" });
     res.end("Not Found");
 });
 
-const PORT = Number.parseInt(process.env.PORT || "3000", 10);
-server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Inngest server listening on http://0.0.0.0:${PORT}`);
-    console.log(`Inngest Endpoint: http://0.0.0.0:${PORT}/api/inngest`);
-    console.log(`Health Check: http://0.0.0.0:${PORT}/health`);
+async function shutdown(signal: string): Promise<void> {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[server] received ${signal}; shutting down`);
+
+    if (queueRuntime) {
+        await queueRuntime.close().catch((error) => {
+            console.error(`[server] queue shutdown error: ${error.message}`);
+        });
+    }
+
+    server.close(() => process.exit(0));
+}
+
+const port = Number.parseInt(process.env.PORT || "3000", 10);
+server.listen(port, "0.0.0.0", () => {
+    console.log(`[server] BullMQ worker listening on http://0.0.0.0:${port}`);
+    console.log(`[server] Health check: http://0.0.0.0:${port}/health`);
+    console.log(`[server] Readiness check: http://0.0.0.0:${port}/ready`);
+
+    void startBullMq()
+        .then((runtime) => {
+            queueRuntime = runtime;
+            queueState = "ready";
+        })
+        .catch((error: unknown) => {
+            queueState = "error";
+            const message = error instanceof Error ? error.message : String(error);
+            console.error(`[bullmq] startup failed: ${message}`);
+        });
 });
+
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
