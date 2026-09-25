@@ -5,14 +5,11 @@
   "type": "module",
   "main": "update-proxies.ts",
   "scripts": {
-    "start": "node dist/server.js",
-    "serve": "nub src/server.ts",
     "benchmark": "nub update-proxies.ts",
     "launcher": "nub launcher.ts",
     "typecheck": "tsc --noEmit",
     "build:bundle": "esbuild update-proxies.ts --bundle --platform=node --format=esm --minify --outfile=dist/proxy-benchmarker.min.mjs",
-    "build:server": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --packages=external",
-    "build": "esbuild update-proxies.ts --bundle --platform=node --format=esm --minify --outfile=dist/proxy-benchmarker.min.mjs && esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --packages=external"
+    "build": "esbuild update-proxies.ts --bundle --platform=node --format=esm --minify --outfile=dist/proxy-benchmarker.min.mjs"
   },
   "keywords": [
     "proxy",
@@ -30,10 +27,5 @@
     "@types/node": "^26.6.2",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
-  },
-  "dependencies": {
-    "@octokit/rest": "^22.0.1",
-    "bullmq": "^6.3.8",
-    "ioredis": "^5.8.2"
   }
 }
