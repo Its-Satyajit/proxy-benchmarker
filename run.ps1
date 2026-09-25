@@ -10,7 +10,7 @@ $RepoOwner = "Its-Satyajit"
 $RepoName = "proxy-benchmarker"
 # Pinned so `irm | iex` runs one immutable bundle.
 # Override with $env:PROXY_BENCHMARKER_REF to track a tag, branch or commit.
-$BundleRef = if ($env:PROXY_BENCHMARKER_REF) { $env:PROXY_BENCHMARKER_REF } else { "v1.0.48" }
+$BundleRef = if ($env:PROXY_BENCHMARKER_REF) { $env:PROXY_BENCHMARKER_REF } else { "v1.0.49" }
 $JsdelivrUrl = "https://cdn.jsdelivr.net/gh/$RepoOwner/$RepoName@$BundleRef/dist/proxy-benchmarker.min.mjs"
 $ReleaseUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/$BundleRef/proxy-benchmarker.min.mjs"
 $RawUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$BundleRef/dist/proxy-benchmarker.min.mjs"
