@@ -17,7 +17,7 @@ COPY . .
 # Build standalone runner bundle and BullMQ worker server
 RUN npm run build
 
-# Expose HTTP port for Railway health checks and Inngest endpoints
+# Expose HTTP port for health and BullMQ readiness checks
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
