@@ -7,7 +7,7 @@ import type { Protocol, ProxyItem } from "./src/types.js";
 import { CONFIG } from "./src/config.js";
 import { log, ansi } from "./src/terminal.js";
 import { checkDependencies, prepareEndpoints, getLocalPublicIp } from "./src/dns.js";
-import { downloadCsv, parseCsv } from "./src/csv.js";
+import { downloadAllFeeds, parseCsv } from "./src/csv.js";
 import { deduplicateProxies, parseProxyString } from "./src/proxy.js";
 import { runProxyTests } from "./src/tester.js";
 import {
@@ -151,21 +151,17 @@ async function main(): Promise<void> {
         }
         log("");
     } else {
-        // 3. Download Proxy List Feed
+        // 3. Download Proxy List Feeds (Aggregate & Set Deduplicate)
         log("========================================");
         log("     Fetching Candidate Route Feeds     ");
         log("========================================");
         log("");
 
-        const csv = await downloadCsv(CONFIG.csvUrls, CONFIG);
-
-        // 4. Parse and Normalize
-        log(`\n${ansi.cyan}Parsing candidate endpoints...${ansi.reset}`);
-        const rows = parseCsv(csv);
-        proxies = deduplicateProxies(rows);
+        const { proxies: feedProxies } = await downloadAllFeeds(CONFIG);
+        proxies = feedProxies;
 
         if (proxies.length === 0) {
-            throw new Error("Candidate feed contained no valid endpoints.");
+            throw new Error("Candidate feeds contained no valid endpoints.");
         }
 
         if (effectiveLimit > 0 && effectiveLimit < proxies.length) {
@@ -178,7 +174,7 @@ async function main(): Promise<void> {
             discovered[proxy.protocol]++;
         }
 
-        log(`  Discovered ${proxies.length.toLocaleString()} unique candidate routes\n`);
+        log(`  Target candidate routes to benchmark (${proxies.length.toLocaleString()} total):\n`);
         for (const protocol of ["http", "https", "socks4", "socks5"] as Protocol[]) {
             log(`  ${protocol.toUpperCase().padEnd(7)} ${discovered[protocol].toLocaleString()}`);
         }

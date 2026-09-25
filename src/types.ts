@@ -12,6 +12,12 @@ export interface ProxyItem {
     raw?: string;
 }
 
+export interface CandidateFeed {
+    name: string;
+    urls: string[];
+    defaultProtocol?: Protocol;
+}
+
 export interface WebsiteTarget {
     name: string;
     domain: string;
@@ -129,7 +135,8 @@ export interface AppConfig {
     limit: number;
     fullBenchmark: boolean;
     benchmarkTopWebsites: boolean;
-    csvUrls: string[];
+    feeds: CandidateFeed[];
+    csvUrls?: string[];
     testEndpoints: TestEndpoint[];
     topWebsites: WebsiteTarget[];
     outputDir: string;

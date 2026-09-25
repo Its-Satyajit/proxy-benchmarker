@@ -1,5 +1,5 @@
 import process from "node:process";
-import type { AppConfig, TestEndpoint } from "./types.js";
+import type { AppConfig, CandidateFeed, TestEndpoint } from "./types.js";
 import { TOP_50_WEBSITES } from "./websites.js";
 
 const DEFAULT_CONCURRENCY = 150;
@@ -12,6 +12,83 @@ const DEFAULT_WEBSITE_CONNECT_TIMEOUT_SECONDS = 2.0;
 const DEFAULT_WEBSITE_CONCURRENCY = 25;
 const DEFAULT_CLOUDFLARE_DNS = "1.1.1.1";
 const DEFAULT_ENDPOINT_RETRIES = 2;
+
+export const CANDIDATE_FEEDS: CandidateFeed[] = [
+    {
+        name: "proxifly/free-proxy-list",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/all/data.csv",
+            "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/all/data.csv",
+        ],
+    },
+    {
+        name: "proxyscrape/free-proxy-list",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/proxyscrape/free-proxy-list@main/proxies/all/data.csv",
+            "https://raw.githubusercontent.com/ProxyScrape/free-proxy-list/main/proxies/all/data.csv",
+        ],
+    },
+    {
+        name: "hproxy-com/free-proxy-list",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/hproxy-com/free-proxy-list@main/live.csv",
+            "https://raw.githubusercontent.com/hproxy-com/free-proxy-list/main/live.csv",
+        ],
+    },
+    {
+        name: "proxmint/free-proxy-list",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/proxmint/free-proxy-list@main/proxies/all.txt",
+            "https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/all.txt",
+        ],
+    },
+    {
+        name: "proxio-io/proxy-list",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/proxio-io/proxy-list@main/all.txt",
+            "https://raw.githubusercontent.com/proxio-io/proxy-list/main/all.txt",
+        ],
+        defaultProtocol: "http",
+    },
+    {
+        name: "iplocate/free-proxy-list",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/iplocate/free-proxy-list@main/all-proxies.txt",
+            "https://raw.githubusercontent.com/iplocate/free-proxy-list/main/all-proxies.txt",
+        ],
+    },
+    {
+        name: "databay-labs/http",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/databay-labs/free-proxy-list@master/http.txt",
+            "https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/http.txt",
+        ],
+        defaultProtocol: "http",
+    },
+    {
+        name: "databay-labs/socks4",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/databay-labs/free-proxy-list@master/socks4.txt",
+            "https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/socks4.txt",
+        ],
+        defaultProtocol: "socks4",
+    },
+    {
+        name: "databay-labs/socks5",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/databay-labs/free-proxy-list@master/socks5.txt",
+            "https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/socks5.txt",
+        ],
+        defaultProtocol: "socks5",
+    },
+    {
+        name: "monosans/proxy-list",
+        urls: [
+            "https://cdn.jsdelivr.net/gh/monosans/proxy-list@main/proxies/all.txt",
+            "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt",
+        ],
+    },
+];
 
 export const TEST_ENDPOINTS: TestEndpoint[] = [
     { name: "api.ipify.org", url: "https://api.ipify.org", parser: "plain" },
@@ -41,10 +118,8 @@ export const CONFIG: AppConfig = {
     limit: Number.parseInt(process.env.LIMIT || "0", 10),
     fullBenchmark: process.env.FULL_BENCHMARK === "true",
     benchmarkTopWebsites: process.env.BENCHMARK_WEBSITES !== "false",
-    csvUrls: [
-        "https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/all/data.csv",
-        "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/all/data.csv",
-    ],
+    feeds: CANDIDATE_FEEDS,
+    csvUrls: CANDIDATE_FEEDS[0].urls,
     testEndpoints: TEST_ENDPOINTS,
     topWebsites: TOP_50_WEBSITES,
     outputDir: process.cwd(),
