@@ -468,7 +468,7 @@ export async function runProxyTests(
     /* ----------------------------------------------------------
      * STAGE 1: Ultra-Fast Async TCP Port Pre-Filter (500-800 Sockets)
      * ---------------------------------------------------------- */
-    const tcpConcurrency = Math.min(Math.max(config.tcpConcurrency || 600, 50), proxies.length);
+    const tcpConcurrency = Math.min(Math.max(config.tcpConcurrency || 1500, 50), proxies.length);
     const tcpTimeoutMs = config.tcpTimeoutMs || 1200;
 
     process.stdout.write(`\n${ansi.bold}${ansi.cyan}>> Stage 1: Async TCP Socket Pre-Filter (${tcpConcurrency} parallel sockets)${ansi.reset}\n`);
@@ -531,10 +531,10 @@ export async function runProxyTests(
     );
 
     /* ----------------------------------------------------------
-     * STAGE 2: Proxy Protocol & Exit IP Verification (150+ Workers)
+     * STAGE 2: Proxy Protocol & Exit IP Verification (300 workers)
      * ---------------------------------------------------------- */
     const aliveCandidates: CandidateData[] = [];
-    const stage2Concurrency = Math.min(Math.max(config.concurrency || 150, 10), Math.max(tcpResponsiveProxies.length, 1));
+    const stage2Concurrency = Math.min(Math.max(config.concurrency || 300, 10), Math.max(tcpResponsiveProxies.length, 1));
 
     if (tcpResponsiveProxies.length > 0) {
         process.stdout.write(`${ansi.bold}${ansi.cyan}>> Stage 2: Health & Exit IP Verification (${stage2Concurrency} parallel workers)${ansi.reset}\n`);
