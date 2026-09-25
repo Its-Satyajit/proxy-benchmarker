@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import dns from "node:dns/promises";
 import { isIP } from "node:net";
-import type { AppConfig, TestEndpoint } from "./types.js";
+import type { AppConfig, TestEndpoint, WebsiteTarget } from "./types.js";
 import { log, ansi, sleep } from "./terminal.js";
 
 const execFileAsync = promisify(execFile);
@@ -170,4 +170,30 @@ export async function prepareEndpoints(testEndpoints: TestEndpoint[], config: Ap
 
     log("");
     return enabled;
+}
+
+export async function prepareWebsiteTargets(websites: WebsiteTarget[], config: AppConfig): Promise<WebsiteTarget[]> {
+    const resolvedWebsites: WebsiteTarget[] = [];
+    const resolver = new dns.Resolver({ timeout: 3000, tries: 2 });
+    if (config.cloudflareDns) {
+        resolver.setServers([config.cloudflareDns]);
+    }
+
+    const tasks = websites.map(async (w) => {
+        const target = parseUrl(w.url);
+        try {
+            if (isIP(target.hostname) === 4) {
+                return { ...w, resolvedIp: target.hostname };
+            }
+            const addresses = await resolver.resolve4(target.hostname);
+            const valid = addresses.find((ip) => isIP(ip) === 4);
+            return { ...w, resolvedIp: valid };
+        } catch {
+            return w;
+        }
+    });
+
+    const results = await Promise.all(tasks);
+    resolvedWebsites.push(...results);
+    return resolvedWebsites;
 }

@@ -6,7 +6,7 @@ import process from "node:process";
 import type { Protocol, ProxyItem } from "./src/types.js";
 import { CONFIG } from "./src/config.js";
 import { log, ansi } from "./src/terminal.js";
-import { checkDependencies, prepareEndpoints, getLocalPublicIp } from "./src/dns.js";
+import { checkDependencies, prepareEndpoints, prepareWebsiteTargets, getLocalPublicIp } from "./src/dns.js";
 import { downloadAllFeeds, parseCsv } from "./src/csv.js";
 import { deduplicateProxies, parseProxyString } from "./src/proxy.js";
 import { runProxyTests } from "./src/tester.js";
@@ -21,10 +21,16 @@ import {
 async function parseCliArgs(rawArgs: string[]): Promise<{
     customProxies: ProxyItem[];
     limit?: number;
+    concurrency?: number;
+    tcpConcurrency?: number;
+    preset?: "home" | "safe" | "turbo";
     showHelp?: boolean;
 }> {
     const customProxies: ProxyItem[] = [];
     let limit: number | undefined;
+    let concurrency: number | undefined;
+    let tcpConcurrency: number | undefined;
+    let preset: "home" | "safe" | "turbo" | undefined;
     let showHelp = false;
 
     for (let i = 0; i < rawArgs.length; i++) {
@@ -40,6 +46,43 @@ async function parseCliArgs(rawArgs: string[]): Promise<{
         }
         if (arg.startsWith("--limit=")) {
             limit = Number.parseInt(arg.split("=")[1], 10);
+            continue;
+        }
+        if (arg === "-c" || arg === "--concurrency") {
+            const next = rawArgs[++i];
+            if (next) concurrency = Number.parseInt(next, 10);
+            continue;
+        }
+        if (arg.startsWith("--concurrency=")) {
+            concurrency = Number.parseInt(arg.split("=")[1], 10);
+            continue;
+        }
+        if (arg === "--tcp-concurrency") {
+            const next = rawArgs[++i];
+            if (next) tcpConcurrency = Number.parseInt(next, 10);
+            continue;
+        }
+        if (arg.startsWith("--tcp-concurrency=")) {
+            tcpConcurrency = Number.parseInt(arg.split("=")[1], 10);
+            continue;
+        }
+        if (arg === "--safe") {
+            preset = "safe";
+            continue;
+        }
+        if (arg === "--home") {
+            preset = "home";
+            continue;
+        }
+        if (arg === "--turbo" || arg === "--vps") {
+            preset = "turbo";
+            continue;
+        }
+        if (arg.startsWith("--preset=")) {
+            const val = arg.split("=")[1].toLowerCase();
+            if (val === "safe" || val === "home" || val === "turbo") {
+                preset = val;
+            }
             continue;
         }
         if (arg.startsWith("-")) {
@@ -65,7 +108,7 @@ async function parseCliArgs(rawArgs: string[]): Promise<{
         }
     }
 
-    return { customProxies, limit, showHelp };
+    return { customProxies, limit, concurrency, tcpConcurrency, preset, showHelp };
 }
 
 function printHelp(): void {
@@ -74,23 +117,31 @@ Proxy Benchmark & Network Telemetry Suite
 
 Usage:
   nub update-proxies.ts [options] [proxy...] [file...]
-  curl -fsSL https://.../run.sh | bash -s -- [proxy...]
-  irm https://.../run.ps1 | iex [proxy...]
+  curl -fsSL https://.../run.sh | bash -s -- [options] [proxy...]
+  irm https://.../run.ps1 | iex [options] [proxy...]
 
 Examples:
-  # Benchmark full proxy feed
+  # Benchmark with safe home-router defaults (balanced)
   nub update-proxies.ts
+
+  # Benchmark with ultra-gentle mode for sensitive/budget WiFi routers
+  nub update-proxies.ts --safe
+
+  # Benchmark high-speed mode on VPS / Gigabit servers
+  nub update-proxies.ts --turbo
 
   # Benchmark a single specific proxy route
   nub update-proxies.ts socks5://64.227.186.105:1080
-
-  # Benchmark multiple custom routes
-  nub update-proxies.ts http://1.2.3.4:8080 socks5://64.227.186.105:1080
 
   # Benchmark custom list from file
   nub update-proxies.ts my-proxies.txt
 
 Options:
+  --safe              Ultra-safe profile (35 TCP sockets, 12 workers) for budget routers
+  --home              Home router profile (80 TCP sockets, 25 workers - default)
+  --turbo, --vps      High-performance profile (600 TCP sockets, 150 workers)
+  -c, --concurrency   Override parallel worker count
+  --tcp-concurrency   Override parallel TCP socket pre-filter count
   -n, --limit <num>   Limit the number of proxies to test
   -h, --help          Show this help message
 `);
@@ -101,12 +152,29 @@ Options:
  * ============================================================ */
 
 async function main(): Promise<void> {
-    const { customProxies, limit, showHelp } = await parseCliArgs(process.argv.slice(2));
+    const { customProxies, limit, concurrency, tcpConcurrency, preset, showHelp } = await parseCliArgs(process.argv.slice(2));
 
     if (showHelp) {
         printHelp();
         process.exit(0);
     }
+
+    if (preset === "safe") {
+        CONFIG.tcpConcurrency = 35;
+        CONFIG.concurrency = 12;
+        CONFIG.websiteConcurrency = 3;
+    } else if (preset === "home") {
+        CONFIG.tcpConcurrency = 80;
+        CONFIG.concurrency = 25;
+        CONFIG.websiteConcurrency = 5;
+    } else if (preset === "turbo") {
+        CONFIG.tcpConcurrency = 600;
+        CONFIG.concurrency = 150;
+        CONFIG.websiteConcurrency = 15;
+    }
+
+    if (concurrency !== undefined) CONFIG.concurrency = concurrency;
+    if (tcpConcurrency !== undefined) CONFIG.tcpConcurrency = tcpConcurrency;
 
     const effectiveLimit = limit !== undefined ? limit : CONFIG.limit;
 
@@ -133,8 +201,11 @@ async function main(): Promise<void> {
         `${ansi.reset}\n`
     );
 
-    // 2. Resolve Test Endpoint DNS
+    // 2. Resolve Test Endpoint & Edge Targets DNS
     const endpoints = await prepareEndpoints(CONFIG.testEndpoints, CONFIG);
+    if (CONFIG.benchmarkTopWebsites && CONFIG.topWebsites.length > 0) {
+        CONFIG.topWebsites = await prepareWebsiteTargets(CONFIG.topWebsites, CONFIG);
+    }
 
     let proxies: ProxyItem[] = [];
 

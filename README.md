@@ -110,17 +110,43 @@ nub run build
 
 ---
 
+## Concurrency Presets & Options
+
+| Preset | Target Environment | TCP Sockets | Worker Pool | Website Concurrency |
+| :--- | :--- | :---: | :---: | :---: |
+| `--home` *(Default)* | Standard Home WiFi / Fiber | `80` | `25` | `5` |
+| `--safe` | Budget / TP-Link / Low-Resource WiFi | `35` | `12` | `3` |
+| `--turbo` / `--vps` | VPS / Server / 10G Datacenter | `600` | `150` | `15` |
+
+### Command line options
+
+```bash
+# Safe mode for sensitive home / TP-Link routers
+curl -fsSL https://.../run.sh | bash -s -- --safe
+
+# Test first 50 proxies safely
+curl -fsSL https://.../run.sh | bash -s -- --safe -n 50
+
+# High-speed Gigabit VPS benchmark
+curl -fsSL https://.../run.sh | bash -s -- --turbo
+```
+
+---
+
 ## Environment variables
 
 | Variable | Default | Details |
 | :--- | :---: | :--- |
-| `TCP_CONCURRENCY` | `600` | Parallel TCP socket checks in stage 1. |
+| `PRESET` | `home` | Concurrency preset (`home`, `safe`, `turbo`). |
+| `TCP_CONCURRENCY` | `80` (or `35` in safe) | Parallel TCP socket checks in stage 1. |
 | `TCP_TIMEOUT` | `1200` | Socket timeout in milliseconds. |
-| `CONCURRENCY` | `150` | Parallel curl workers for stages 2 and 3. |
-| `CONNECT_TIMEOUT` | `3` | Connection timeout in seconds. |
-| `TIMEOUT` | `4` | Total request timeout in seconds. |
-| `WEBSITE_TIMEOUT` | `3.5` | Website check timeout in seconds. |
-| `DNS` | `1.1.1.1` | Resolver for endpoint IPs. |
+| `CONCURRENCY` | `25` (or `12` in safe) | Parallel curl workers for stages 2 and 3. |
+| `CONNECT_TIMEOUT` | `3.0` | Connection timeout in seconds. |
+| `TIMEOUT` | `4.0` | Total request timeout in seconds. |
+| `WEBSITE_TIMEOUT` | `4.5` | Website check timeout in seconds. |
+| `WEBSITE_CONNECT_TIMEOUT` | `3.0` | Website connection timeout in seconds. |
+| `WEBSITE_CONCURRENCY` | `5` (or `3` in safe) | Parallel website checks per candidate. |
+| `DNS` | `1.1.1.1` | Resolver for pre-resolving endpoint IPs. |
 | `LIMIT` | `0` | Number of proxies to test (0 = all). |
 | `FULL_BENCHMARK` | `false` | Tests all 11 verification endpoints when true. |
 | `BENCHMARK_WEBSITES` | `true` | Enables 50-site reachability test. |
@@ -128,11 +154,11 @@ nub run build
 ### Example runs
 
 ```bash
-# Quick test on first 50 proxies
-LIMIT=50 nub update-proxies.ts
+# Ultra-gentle run for home routers
+PRESET=safe LIMIT=50 nub update-proxies.ts
 
-# Fast scan on unstable network
-TIMEOUT=5 CONNECT_TIMEOUT=3 nub update-proxies.ts
+# Custom fine-tuned concurrency
+TCP_CONCURRENCY=40 CONCURRENCY=15 nub update-proxies.ts
 ```
 
 ---

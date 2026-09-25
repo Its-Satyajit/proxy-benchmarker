@@ -262,6 +262,7 @@ export async function testProxyWebsite(
     website: WebsiteTarget,
     config: AppConfig
 ): Promise<WebsiteProbeResult> {
+    const target = parseUrl(website.url);
     const writeOutFormat = "\n__BENCHMARK__:%{http_code}:%{time_connect}:%{time_appconnect}:%{time_starttransfer}:%{time_total}:%{speed_download}:%{size_download}";
 
     const args: string[] = [
@@ -271,15 +272,20 @@ export async function testProxyWebsite(
         "--show-error",
         "-o", "/dev/null",
         "--noproxy", "",
-        "--connect-timeout", String(config.websiteConnectTimeoutSeconds || 2.0),
-        "--max-time", String(config.websiteTimeoutSeconds || 3.0),
+        "--connect-timeout", String(config.websiteConnectTimeoutSeconds || 3.0),
+        "--max-time", String(config.websiteTimeoutSeconds || 4.5),
         "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "-w", writeOutFormat,
         ...buildCurlProxyArgs(proxy),
-        website.url,
     ];
 
-    const timeoutMs = ((config.websiteTimeoutSeconds || 3.0) * 1000) + 1000;
+    if (website.resolvedIp && (proxy.protocol === "http" || proxy.protocol === "https")) {
+        args.push("--resolve", `${target.hostname}:${target.port}:${website.resolvedIp}`);
+    }
+
+    args.push(website.url);
+
+    const timeoutMs = ((config.websiteTimeoutSeconds || 4.5) * 1000) + 1000;
 
     let stdout = "";
     let stderr = "";
@@ -350,14 +356,25 @@ export async function benchmarkTopWebsitesForProxy(
     config: AppConfig
 ): Promise<WebsiteProbeResult[]> {
     const results: WebsiteProbeResult[] = [];
-    const concurrency = config.websiteConcurrency || 25;
+    const concurrency = Math.max(config.websiteConcurrency || 5, 2);
 
+    let anyPassed = false;
     for (let i = 0; i < websites.length; i += concurrency) {
         const batch = websites.slice(i, i + concurrency);
         const batchResults = await Promise.all(
             batch.map((w) => testProxyWebsite(proxy, w, config))
         );
         results.push(...batchResults);
+
+        if (batchResults.some((r) => r.ok)) {
+            anyPassed = true;
+        }
+
+        // Fast-fail: If the first batch (e.g. Google, Cloudflare, MS, Apple) completely fails/times out,
+        // this proxy does not support HTTP CONNECT / SSL web routing. Avoid sending 40+ more useless requests.
+        if (results.length >= concurrency && !anyPassed) {
+            break;
+        }
     }
 
     return results;

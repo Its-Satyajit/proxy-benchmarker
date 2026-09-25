@@ -23,6 +23,7 @@ export interface WebsiteTarget {
     domain: string;
     category: string;
     url: string;
+    resolvedIp?: string;
 }
 
 export interface TestEndpoint {
