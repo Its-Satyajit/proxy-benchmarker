@@ -57,14 +57,10 @@ nub run build
 
 ## CI
 
-The repository keeps automated benchmarking and report publishing in:
+The benchmark workflow is temporarily disabled. Its definition is retained at:
 
 ```text
-.github/workflows/update-proxies.yml
+.github/workflows/update-proxies.yml.disabled
 ```
 
-Run it from **GitHub Actions → Update Proxies & Publish Report → Run workflow**.
-
-- A normal run executes the standalone benchmark bundle, updates the proxy files and telemetry on `master`, and deploys the HTML report to GitHub Pages.
-- Set the `deploy_only` input to `true` to publish the existing report without running another benchmark.
-- Benchmark output files are generated during the workflow and committed to `master` only when the run produces verified results.
+To re-enable it, rename the file back to `update-proxies.yml`. The regular typecheck and release workflows remain enabled.
