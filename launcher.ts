@@ -29,14 +29,21 @@ async function fetchLatestBundle(): Promise<string> {
     log(`${ansi.cyan}[INFO] Fetching latest minified release from GitHub (${REPO_OWNER}/${REPO_NAME})...${ansi.reset}`);
 
     const sources = [
-        // 1. Fast jsDelivr GitHub CDN
+        // 1. Fast jsDelivr GitHub CDN (@latest release tag)
+        async () => {
+            const url = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@latest/dist/${BUNDLE_FILENAME}`;
+            const res = await fetch(url, { redirect: "follow" });
+            if (!res.ok) throw new Error(`jsDelivr @latest returned HTTP ${res.status}`);
+            return await res.text();
+        },
+        // 2. Fast jsDelivr GitHub CDN (@master branch)
         async () => {
             const url = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@master/dist/${BUNDLE_FILENAME}`;
             const res = await fetch(url, { redirect: "follow" });
-            if (!res.ok) throw new Error(`jsDelivr CDN returned HTTP ${res.status}`);
+            if (!res.ok) throw new Error(`jsDelivr @master returned HTTP ${res.status}`);
             return await res.text();
         },
-        // 2. Direct GitHub Release Asset Download
+        // 3. Direct GitHub Release Asset Download
         async () => {
             const url = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download/${BUNDLE_FILENAME}`;
             const res = await fetch(url, { redirect: "follow" });
