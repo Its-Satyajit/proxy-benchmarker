@@ -4,7 +4,7 @@ Asynchronous network telemetry and proxy benchmarking suite. Measures TCP handsh
 
 A 3-stage non-blocking pipeline evaluates 26,000+ candidate routes in under 90 seconds, outputting normalized proxy configurations (`http.txt`, `socks5.txt`), machine-readable JSON telemetry (`benchmark-report.json`), and an interactive client-side report.
 
-![Interactive benchmark report](images/Screenshot_20260925_003102.png)
+![Interactive benchmark report](images/benchmark-report.png)
 
 ---
 
@@ -42,13 +42,13 @@ nub launcher.ts
 
 Probing tens of thousands of network endpoints with individual subprocesses creates massive CPU and process spawn bottlenecks when 85%+ of candidates are unreachable. This suite uses a tiered funnel to maximize throughput:
 
-![CLI terminal execution](images/Screenshot_20260925_002844.png)
+![CLI terminal execution](images/terminal-execution.png)
 
 1. **Asynchronous TCP socket pre-filter (600 parallel sockets).** Connects directly to candidate IP:port pairs using non-blocking Node.js sockets (1.2s timeout). Eliminates closed ports and unroutable hosts in ~15 seconds without spawning curl processes.
 2. **Protocol handshake and egress verification (150 parallel workers).** Probes surviving endpoints to measure TCP connect duration, TLS negotiation time, TTFB, and exit IP leak detection against the local network origin.
 3. **Global edge transit benchmark.** Evaluates real-world HTTP/HTTPS reachability, status code return distributions, and latency across 50 major web properties and content delivery networks.
 
-![Website latency and reachability breakdown](images/Screenshot_20260925_003321.png)
+![Website latency and reachability breakdown](images/website-breakdown.png)
 
 ---
 
