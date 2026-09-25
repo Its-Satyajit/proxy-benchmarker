@@ -115,7 +115,8 @@ async function main(): Promise<void> {
 
     log(`${ansi.bold}${ansi.cyan}>> Starting Benchmark Execution...${ansi.reset}\n`);
 
-    const child = spawn("node", [bundlePath, ...process.argv.slice(2)], {
+    const runtimeBin = process.execPath || "node";
+    const child = spawn(runtimeBin, [bundlePath, ...process.argv.slice(2)], {
         stdio: "inherit",
         env: process.env,
     });

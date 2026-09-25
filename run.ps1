@@ -5,13 +5,27 @@ $RepoOwner = "Its-Satyajit"
 $RepoName = "proxy-benchmarker"
 $ReleaseUrl = "https://github.com/$RepoOwner/$RepoName/releases/latest/download/proxy-benchmarker.min.mjs"
 $RawMasterUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/master/dist/proxy-benchmarker.min.mjs"
+$RawMainUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/main/dist/proxy-benchmarker.min.mjs"
 $TempFile = Join-Path $env:TEMP "proxy-benchmarker-$PID.mjs"
 $ReportFile = Join-Path (Get-Location) "benchmark-report.html"
 
-# Verify Node.js is installed
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Write-Host "[ERROR] Node.js is required but not installed or not in PATH." -ForegroundColor Red
-    Write-Host "Install Node.js from https://nodejs.org or via winget: winget install OpenJS.NodeJS" -ForegroundColor Yellow
+function Get-JsRuntime {
+    if (Get-Command nub -ErrorAction SilentlyContinue) { return "nub" }
+    if (Get-Command bun -ErrorAction SilentlyContinue) { return "bun" }
+    if (Get-Command node -ErrorAction SilentlyContinue) { return "node" }
+    if (Get-Command deno -ErrorAction SilentlyContinue) { return "deno" }
+    if (Get-Command npx -ErrorAction SilentlyContinue) { return "npx" }
+    if (Get-Command pnpm -ErrorAction SilentlyContinue) { return "pnpm" }
+    if (Get-Command yarn -ErrorAction SilentlyContinue) { return "yarn" }
+    return $null
+}
+
+$Runtime = Get-JsRuntime
+if (-not $Runtime) {
+    Write-Host "[ERROR] No JavaScript runtime detected (nub, bun, node, deno, npx, pnpm, yarn)." -ForegroundColor Red
+    Write-Host "Install Node.js or Bun:" -ForegroundColor Yellow
+    Write-Host "  winget install OpenJS.NodeJS" -ForegroundColor Gray
+    Write-Host "  irm https://bun.sh/install.ps1 | iex" -ForegroundColor Gray
     exit 1
 }
 
@@ -21,7 +35,7 @@ Write-Host "  Proxy Benchmark & Network Telemetry   " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "[INFO] Fetching latest bundle from GitHub..." -ForegroundColor Gray
+Write-Host "[INFO] Fetching latest benchmark bundle..." -ForegroundColor Gray
 
 $Downloaded = $false
 
@@ -30,10 +44,10 @@ try {
     Invoke-WebRequest -Uri $ReleaseUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
     if ((Test-Path $TempFile) -and (Get-Item $TempFile).Length -gt 1000) {
         $Downloaded = $true
-        Write-Host "[OK] Downloaded release asset." -ForegroundColor Green
+        Write-Host "[OK] Downloaded latest release asset." -ForegroundColor Green
     }
 } catch {
-    # Fallback to raw master branch
+    # 2. Fallback to raw master branch
     try {
         Invoke-WebRequest -Uri $RawMasterUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
         if ((Test-Path $TempFile) -and (Get-Item $TempFile).Length -gt 1000) {
@@ -41,11 +55,20 @@ try {
             Write-Host "[OK] Downloaded bundle from master branch." -ForegroundColor Green
         }
     } catch {
-        # Check if local dist exists
-        if (Test-Path "./dist/proxy-benchmarker.min.mjs") {
-            $TempFile = "./dist/proxy-benchmarker.min.mjs"
-            $Downloaded = $true
-            Write-Host "[WARN] Using local bundle: ./dist/proxy-benchmarker.min.mjs" -ForegroundColor Yellow
+        # 3. Fallback to raw main branch
+        try {
+            Invoke-WebRequest -Uri $RawMainUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
+            if ((Test-Path $TempFile) -and (Get-Item $TempFile).Length -gt 1000) {
+                $Downloaded = $true
+                Write-Host "[OK] Downloaded bundle from main branch." -ForegroundColor Green
+            }
+        } catch {
+            # 4. Check if local dist exists
+            if (Test-Path "./dist/proxy-benchmarker.min.mjs") {
+                $TempFile = "./dist/proxy-benchmarker.min.mjs"
+                $Downloaded = $true
+                Write-Host "[WARN] Using local bundle: ./dist/proxy-benchmarker.min.mjs" -ForegroundColor Yellow
+            }
         }
     }
 }
@@ -55,13 +78,21 @@ if (-not $Downloaded) {
     exit 1
 }
 
-Write-Host ">> Executing Benchmark..." -ForegroundColor Cyan
+Write-Host ">> Executing benchmark using $Runtime..." -ForegroundColor Cyan
 Write-Host ""
 
 $ExitCode = 0
 try {
-    & node $TempFile $args
-    $ExitCode = $LASTEXITCODE
+    switch ($Runtime) {
+        "nub"  { & nub $TempFile $args; $ExitCode = $LASTEXITCODE }
+        "bun"  { & bun run $TempFile $args; $ExitCode = $LASTEXITCODE }
+        "node" { & node $TempFile $args; $ExitCode = $LASTEXITCODE }
+        "deno" { & deno run -A $TempFile $args; $ExitCode = $LASTEXITCODE }
+        "npx"  { & npx --yes node $TempFile $args; $ExitCode = $LASTEXITCODE }
+        "pnpm" { & pnpm exec node $TempFile $args; $ExitCode = $LASTEXITCODE }
+        "yarn" { & yarn node $TempFile $args; $ExitCode = $LASTEXITCODE }
+        Default { & node $TempFile $args; $ExitCode = $LASTEXITCODE }
+    }
 } catch {
     $ExitCode = 1
 }
@@ -74,7 +105,7 @@ if ($TempFile -ne "./dist/proxy-benchmarker.min.mjs" -and (Test-Path $TempFile))
 # Auto-open HTML report in default browser
 if ($ExitCode -eq 0 -and (Test-Path $ReportFile)) {
     Write-Host ""
-    Write-Host "[INFO] Opening HTML Benchmark Report in your browser..." -ForegroundColor Cyan
+    Write-Host "[INFO] Opening HTML benchmark report in your browser..." -ForegroundColor Cyan
     Start-Process $ReportFile
     Write-Host "Report available at: $ReportFile" -ForegroundColor Gray
 }
