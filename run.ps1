@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoOwner = "Its-Satyajit"
 $RepoName = "proxy-benchmarker"
+$JsdelivrUrl = "https://cdn.jsdelivr.net/gh/$RepoOwner/$RepoName@master/dist/proxy-benchmarker.min.mjs"
 $ReleaseUrl = "https://github.com/$RepoOwner/$RepoName/releases/latest/download/proxy-benchmarker.min.mjs"
 $RawMasterUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/master/dist/proxy-benchmarker.min.mjs"
 $RawMainUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/main/dist/proxy-benchmarker.min.mjs"
@@ -39,35 +40,44 @@ Write-Host "[INFO] Fetching latest benchmark bundle..." -ForegroundColor Gray
 
 $Downloaded = $false
 
-# 1. Download latest release asset
+# 1. Download via jsDelivr Fast CDN
 try {
-    Invoke-WebRequest -Uri $ReleaseUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
+    Invoke-WebRequest -Uri $JsdelivrUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
     if ((Test-Path $TempFile) -and (Get-Item $TempFile).Length -gt 1000) {
         $Downloaded = $true
-        Write-Host "[OK] Downloaded latest release asset." -ForegroundColor Green
+        Write-Host "[OK] Downloaded bundle via jsDelivr CDN." -ForegroundColor Green
     }
 } catch {
-    # 2. Fallback to raw master branch
+    # 2. Fallback to latest release asset
     try {
-        Invoke-WebRequest -Uri $RawMasterUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
+        Invoke-WebRequest -Uri $ReleaseUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
         if ((Test-Path $TempFile) -and (Get-Item $TempFile).Length -gt 1000) {
             $Downloaded = $true
-            Write-Host "[OK] Downloaded bundle from master branch." -ForegroundColor Green
+            Write-Host "[OK] Downloaded latest release asset." -ForegroundColor Green
         }
     } catch {
-        # 3. Fallback to raw main branch
+        # 3. Fallback to raw master branch
         try {
-            Invoke-WebRequest -Uri $RawMainUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
+            Invoke-WebRequest -Uri $RawMasterUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
             if ((Test-Path $TempFile) -and (Get-Item $TempFile).Length -gt 1000) {
                 $Downloaded = $true
-                Write-Host "[OK] Downloaded bundle from main branch." -ForegroundColor Green
+                Write-Host "[OK] Downloaded bundle from master branch." -ForegroundColor Green
             }
         } catch {
-            # 4. Check if local dist exists
-            if (Test-Path "./dist/proxy-benchmarker.min.mjs") {
-                $TempFile = "./dist/proxy-benchmarker.min.mjs"
-                $Downloaded = $true
-                Write-Host "[WARN] Using local bundle: ./dist/proxy-benchmarker.min.mjs" -ForegroundColor Yellow
+            # 4. Fallback to raw main branch
+            try {
+                Invoke-WebRequest -Uri $RawMainUrl -OutFile $TempFile -UseBasicParsing -MaximumRedirection 5
+                if ((Test-Path $TempFile) -and (Get-Item $TempFile).Length -gt 1000) {
+                    $Downloaded = $true
+                    Write-Host "[OK] Downloaded bundle from main branch." -ForegroundColor Green
+                }
+            } catch {
+                # 5. Check if local dist exists
+                if (Test-Path "./dist/proxy-benchmarker.min.mjs") {
+                    $TempFile = "./dist/proxy-benchmarker.min.mjs"
+                    $Downloaded = $true
+                    Write-Host "[WARN] Using local bundle: ./dist/proxy-benchmarker.min.mjs" -ForegroundColor Yellow
+                }
             }
         }
     }
