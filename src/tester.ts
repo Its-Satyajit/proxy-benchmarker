@@ -400,34 +400,46 @@ export async function verifyProxyHealth(
     endpoints: TestEndpoint[],
     config: AppConfig
 ): Promise<{ isAlive: boolean; exitIp: string | null; endpointResults: EndpointProbeResult[] }> {
-    const endpointResults: EndpointProbeResult[] = [];
-    let exitIp: string | null = null;
-    const maxAttempts = config.fullBenchmark ? endpoints.length : Math.min(2, endpoints.length);
-
-    // Test endpoints until at least one succeeds or max fast attempts reached
-    for (let i = 0; i < endpoints.length; i++) {
-        if (i >= maxAttempts && !exitIp) break;
-        const endpoint = endpoints[i];
-        if (!endpoint) continue;
-
-        const epResult = await testProxyEndpoint(proxy, endpoint, config);
-        endpointResults.push(epResult);
-
-        if (epResult.ok) {
-            exitIp = epResult.returnedIp;
-            return {
-                isAlive: true,
-                exitIp,
-                endpointResults,
-            };
+    if (config.fullBenchmark) {
+        const endpointResults: EndpointProbeResult[] = [];
+        let exitIp: string | null = null;
+        for (const endpoint of endpoints) {
+            const epResult = await testProxyEndpoint(proxy, endpoint, config);
+            endpointResults.push(epResult);
+            if (epResult.ok && !exitIp) {
+                exitIp = epResult.returnedIp;
+            }
         }
+        return { isAlive: Boolean(exitIp), exitIp, endpointResults };
     }
 
-    return {
-        isAlive: false,
-        exitIp: null,
-        endpointResults,
-    };
+    // Parallel fast verification with Promise.any across top 2 endpoints
+    const candidateEndpoints = endpoints.slice(0, 2);
+    const probePromises = candidateEndpoints.map(async (ep) => {
+        const res = await testProxyEndpoint(proxy, ep, config);
+        if (res.ok) {
+            return res;
+        }
+        throw res;
+    });
+
+    try {
+        const fastestSuccess = await Promise.any(probePromises);
+        return {
+            isAlive: true,
+            exitIp: fastestSuccess.returnedIp,
+            endpointResults: [fastestSuccess],
+        };
+    } catch (aggregateErr: any) {
+        const failedResults: EndpointProbeResult[] = Array.isArray(aggregateErr?.errors)
+            ? aggregateErr.errors
+            : [];
+        return {
+            isAlive: false,
+            exitIp: null,
+            endpointResults: failedResults,
+        };
+    }
 }
 
 /* ============================================================
