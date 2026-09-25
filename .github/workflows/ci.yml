@@ -61,3 +61,15 @@ jobs:
             echo "::error::dist/proxy-benchmarker.min.mjs is stale. Run 'nub run build' and commit the result."
             exit 1
           fi
+
+      # run.sh pins an immutable release ref; catch a forgotten bump here, not in user terminals.
+      - name: Verify Pinned Runner Ref
+        run: |
+          PINNED_REF="$(sed -n 's/.*PROXY_BENCHMARKER_REF:-\([^}"]*\).*/\1/p' run.sh | head -1)"
+          URL="https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@${PINNED_REF}/dist/proxy-benchmarker.min.mjs"
+          CODE="$(curl -sS -o /dev/null -w '%{http_code}' "$URL")"
+          if [ "$CODE" != "200" ]; then
+            echo "::error::pinned runner ref ${PINNED_REF} does not resolve (HTTP ${CODE}). Bump run.sh and run.ps1 after a release."
+            exit 1
+          fi
+          echo "pinned runner ref ${PINNED_REF} resolves"
