@@ -100,7 +100,9 @@ export interface BenchmarkItem {
     endpointsPassed: number;
     /** Endpoints configured for this run. */
     endpointsTotal: number;
-    /** Passed / started, so a 2-request fast check never reports 1/11. */
+    /** endpointsStarted / endpointsTotal: how much of the endpoint set was probed. */
+    endpointCoveragePercent: number;
+    /** endpointsPassed / endpointsStarted: success across every probe that was launched. */
     endpointPassRatePercent: number;
     /** Website targets configured for this run. */
     websitesAvailable: number;

@@ -57,13 +57,13 @@ irm https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.ps1 | 
 
 ## Command line options and arguments
 
-Pass options after `--` when using `run.sh` or `run.ps1`, or directly to `nub update-proxies.ts`. Every numeric option rejects `0`, negatives, and non-numeric values instead of silently falling back to a default.
+Pass options after `--` when using `run.sh` or `run.ps1`, or directly to `nub update-proxies.ts`. Every numeric option rejects `0`, negatives, and non-numeric values instead of silently falling back to a default, and unknown options are rejected rather than ignored, so a typo cannot leave you believing a limit was applied. Use `--` to stop option parsing when a proxy or filename begins with a dash.
 
 | Option | Description |
 | :--- | :--- |
 | `--safe` | Default gentle profile: 500 candidates, 35 TCP sockets, 12 verification workers, 4 website workers x 3 probes, 16 concurrent curl. Use this on budget routers, guest WiFi, or metered connections. |
 | `--home` | Home profile: 2,000 candidates, 80 TCP sockets, 25 verification workers, 8 website workers x 5 probes, 64 concurrent curl. |
-| `--turbo`, `--vps` | High-throughput profile: unlimited candidates, 1,500 TCP sockets, 300 verification workers, 100 website workers x 25 probes, 1,500 concurrent curl. Use on VPS or gigabit fiber. |
+| `--turbo` | High-throughput profile: unlimited candidates, 1,500 TCP sockets, 300 verification workers, 100 website workers x 25 probes, 1,500 concurrent curl. Use on VPS or gigabit fiber. |
 | `--preset=<name>` | Same as the flags above, e.g. `--preset=turbo`. |
 | `-n <num>`, `--limit <num>` | Test only the first `<num>` candidates. `0` means no cap. |
 | `-c <num>`, `--concurrency <num>` | Stage 2 egress-verification workers. |
@@ -128,6 +128,8 @@ Probing tens of thousands of proxy endpoints one by one with curl would spawn to
 3. **Stage 3: Website reachability.** Working proxies test real connections to 53 web properties (Google, Cloudflare, GitHub, Microsoft, Apple, etc.) in batches. A proxy that fails its first batch exits early, and the report records that early exit instead of implying all 53 targets were tried. Workers = `WEBSITE_WORKERS`, probes per worker = `WEBSITE_CONCURRENCY`.
 4. **Stage 4: Scoring and telemetry.** Each survivor is scored, ranked, and written to the report files.
 
+Candidate selection is deterministic and feed-balanced: when a candidate cap is set, candidates are drawn round-robin across the feeds instead of taking the first N in feed order, so one large feed cannot dominate the sample. Feed downloads run three at a time, and every `curl` in the process — feed fetches, origin-IP lookup, and all benchmark probes — passes through the global curl cap.
+
 ![Website latency and reachability breakdown](images/website-breakdown.png)
 
 ---
@@ -156,7 +158,7 @@ The HTML report's ranking sliders default to these exact weights, so the browser
 ### What the report does and does not claim
 
 - **Egress IP** compares the observed exit IP with your origin IP: `DIFFERENT_EGRESS_IP`, `SAME_EGRESS_IP`, or `UNKNOWN`. It is not an anonymity verdict. Header leaks such as `X-Forwarded-For`, `Via`, and `Forwarded` are not probed, so no "elite/anonymous" label is shown anywhere.
-- **Egress probes** report `endpointsStarted`, `endpointsCompleted`, and `endpointsPassed`. A fast check launches two probes but usually keeps one result, and the pass rate is computed over completed probes.
+- **Egress probes** report `endpointsStarted`, `endpointsCompleted`, and `endpointsPassed`, plus two separate rates: `endpointCoveragePercent` (how much of the endpoint set was probed, e.g. 18.2% for a 2-of-11 fast check) and `endpointPassRatePercent` (success across probes that were launched, so a cancelled probe never reads as a pass).
 - **Websites** report `websitesPassed / websitesAttempted` alongside `websitesAvailable` and `websitesEarlyExit`, so an early-exit sweep is not read as "all 53 targets failed".
 - **performanceSource** tells you whether latency and throughput came from website probes or, when no website succeeded, from egress verification. Egress latency is always reported separately as `egressVerificationLatencyMs`.
 - **TLS mode** is `permissive` by default (broken certificates still count as transport reachability) and is recorded in the report's `run` metadata. Use `--strict-tls` to measure real HTTPS connectivity.
@@ -202,7 +204,8 @@ Every run writes formatted proxy lists and telemetry files to the working direct
       "endpointsCompleted": 1,
       "endpointsPassed": 1,
       "endpointsTotal": 11,
-      "endpointPassRatePercent": 100,
+      "endpointCoveragePercent": 18.2,
+      "endpointPassRatePercent": 50,
       "websitesAvailable": 53,
       "websitesAttempted": 53,
       "websitesPassed": 41,

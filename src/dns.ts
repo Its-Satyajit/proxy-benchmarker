@@ -4,6 +4,7 @@ import dns from "node:dns/promises";
 import { isIP } from "node:net";
 import type { AppConfig, TestEndpoint, WebsiteTarget } from "./types.js";
 import { log, ansi, sleep } from "./terminal.js";
+import { withCurlSlot } from "./curl-gate.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -16,12 +17,12 @@ export async function getLocalPublicIp(): Promise<string | null> {
 
     for (const url of urls) {
         try {
-            const { stdout } = await execFileAsync("curl", [
+            const { stdout } = await withCurlSlot(() => execFileAsync("curl", [
                 "--silent",
                 "--insecure",
                 "--max-time", "5",
                 url
-            ], { timeout: 6000, windowsHide: true });
+            ], { timeout: 6000, windowsHide: true }));
 
             const ip = stdout.trim();
             if (isIP(ip) === 4) {
@@ -172,6 +173,9 @@ export async function prepareEndpoints(testEndpoints: TestEndpoint[], config: Ap
     return enabled;
 }
 
+/** Startup-only DNS lookups: bounded, so target preparation cannot fan out freely. */
+const DNS_RESOLVE_CONCURRENCY = 8;
+
 export async function prepareWebsiteTargets(websites: WebsiteTarget[], config: AppConfig): Promise<WebsiteTarget[]> {
     const resolvedWebsites: WebsiteTarget[] = [];
     const resolver = new dns.Resolver({ timeout: 3000, tries: 2 });
@@ -179,21 +183,31 @@ export async function prepareWebsiteTargets(websites: WebsiteTarget[], config: A
         resolver.setServers([config.cloudflareDns]);
     }
 
-    const tasks = websites.map(async (w) => {
-        const target = parseUrl(w.url);
+    let next = 0;
+
+    async function resolveTarget(website: WebsiteTarget): Promise<WebsiteTarget> {
+        const target = parseUrl(website.url);
         try {
             if (isIP(target.hostname) === 4) {
-                return { ...w, resolvedIp: target.hostname };
+                return { ...website, resolvedIp: target.hostname };
             }
             const addresses = await resolver.resolve4(target.hostname);
             const valid = addresses.find((ip) => isIP(ip) === 4);
-            return { ...w, resolvedIp: valid };
+            return { ...website, resolvedIp: valid };
         } catch {
-            return w;
+            return website;
         }
-    });
+    }
 
-    const results = await Promise.all(tasks);
-    resolvedWebsites.push(...results);
+    async function worker(): Promise<void> {
+        while (next < websites.length) {
+            const website = websites[next++];
+            if (website) resolvedWebsites.push(await resolveTarget(website));
+        }
+    }
+
+    await Promise.all(
+        Array.from({ length: Math.min(DNS_RESOLVE_CONCURRENCY, websites.length) }, () => worker())
+    );
     return resolvedWebsites;
 }

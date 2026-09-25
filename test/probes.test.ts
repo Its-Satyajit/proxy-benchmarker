@@ -4,6 +4,7 @@ import http from "node:http";
 import { test } from "node:test";
 import { createConfig } from "../src/config.js";
 import { configureCurlGate, curlGateStats } from "../src/curl-gate.js";
+import { ratioPercent } from "../src/metrics.js";
 import { benchmarkTopWebsitesForProxy, testProxyEndpoint, verifyProxyHealth } from "../src/tester.js";
 import type { AppConfig, ProxyItem, TestEndpoint, WebsiteTarget } from "../src/types.js";
 
@@ -110,6 +111,9 @@ test("fast verification cancels the losing probe and reports honest counts", asy
     assert.equal(health.requestsStarted, 2, "two probes are launched");
     assert.equal(health.resultsCompleted, 1, "only the winner is reported");
     assert.equal(health.endpointResults.length, 1);
+    // Coverage and success are separate numbers: 2 of 11 endpoints probed, 1 of 2 passed.
+    assert.equal(ratioPercent(health.requestsStarted, 11), 18.2);
+    assert.equal(ratioPercent(1, health.requestsStarted), 50, "a cancelled probe is not a pass");
     assert.ok(elapsedMs < 2000, `fast path resolved in ${elapsedMs}ms`);
 
     await new Promise((resolve) => setTimeout(resolve, 800));
@@ -152,11 +156,16 @@ test("website sweep records early exit instead of implying 53 failures", async (
     assert.equal(failed.results.filter((r) => r.ok).length, 0);
     await stopServer(failing.server);
 
-    const working = await startProxy(() => ({ delayMs: 10 }));
-    const passed = await benchmarkTopWebsitesForProxy(proxyItem(working.port), websites, localProxyConfig());
-    assert.equal(passed.earlyExit, false);
-    assert.equal(passed.attempted, 9, "a reachable proxy is tested against every target");
-    assert.equal(passed.results.filter((r) => r.ok).length, 9);
+    const working = await startProxy((url) =>
+        url.startsWith("http://site0.invalid/") || url.startsWith("http://site4.invalid/")
+            ? { delayMs: 10, status: 200, body: "ok" }
+            : { delayMs: 10, status: 503, body: "down" }
+    );
+    const partial = await benchmarkTopWebsitesForProxy(proxyItem(working.port), websites, localProxyConfig());
+    assert.equal(partial.earlyExit, false, "one reachable target is enough to keep probing");
+    assert.equal(partial.attempted, 9, "every target is attempted once any target responds");
+    assert.equal(partial.results.filter((r) => r.ok).length, 2, "only the reachable targets passed");
+    assert.equal(partial.results.length, partial.attempted);
     await stopServer(working.server);
 });
 

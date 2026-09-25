@@ -4,6 +4,7 @@ import type { AppConfig, CandidateFeed, Protocol, ProxyItem } from "./types.js";
 import { log, ansi } from "./terminal.js";
 import { resolveOneIPv4 } from "./dns.js";
 import { isValidProxyTarget } from "./proxy.js";
+import { withCurlSlot } from "./curl-gate.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -130,11 +131,11 @@ export async function fetchSingleFeed(feed: CandidateFeed, config: AppConfig): P
             }
             args.push(sourceUrl);
 
-            const { stdout } = await execFileAsync("curl", args, {
+            const { stdout } = await withCurlSlot(() => execFileAsync("curl", args, {
                 timeout: 25_000,
                 maxBuffer: 8 * 1024 * 1024,
                 windowsHide: true,
-            });
+            }));
 
             if (stdout && stdout.length > 30) {
                 return stdout;
@@ -147,20 +148,57 @@ export async function fetchSingleFeed(feed: CandidateFeed, config: AppConfig): P
     throw new Error(`Failed to fetch feed ${feed.name} from all mirrors`);
 }
 
+/**
+ * Deterministic feed-balanced selection.
+ *
+ * Taking the first N entries after feed-order aggregation makes the sample
+ * dominated by whichever feed happens to be fetched first. Round-robin across
+ * the per-feed buckets keeps the sample reproducible (same feeds, same order,
+ * same slice) while giving every feed an equal share.
+ */
+export function interleaveByFeed(buckets: ProxyItem[][], limit: number): ProxyItem[] {
+    if (limit <= 0) return buckets.flat();
+    const selected: ProxyItem[] = [];
+    let round = 0;
+    while (selected.length < limit) {
+        let addedInRound = 0;
+        for (const bucket of buckets) {
+            const item = bucket[round];
+            if (!item) continue;
+            selected.push(item);
+            addedInRound++;
+            if (selected.length >= limit) break;
+        }
+        if (addedInRound === 0) break;
+        round++;
+    }
+    return selected;
+}
+
+const FEED_FETCH_CONCURRENCY = 3;
+
 export async function downloadAllFeeds(config: AppConfig): Promise<{
     proxies: ProxyItem[];
+    feedBuckets: ProxyItem[][];
     feedStats: Array<{ name: string; count: number; status: "OK" | "FAIL" }>;
     totalDiscovered: number;
 }> {
     const feeds = config.feeds;
-    log(`Fetching candidate routes from ${feeds.length} upstream feeds...\n`);
+    log(`Fetching candidate routes from ${feeds.length} upstream feeds (${FEED_FETCH_CONCURRENCY} at a time)...\n`);
 
-    const feedStats: Array<{ name: string; count: number; status: "OK" | "FAIL" }> = [];
     const seen = new Set<string>();
-    const deduplicatedProxies: ProxyItem[] = [];
+    const feedBuckets: ProxyItem[][] = feeds.map(() => []);
+    const feedStats: Array<{ name: string; count: number; status: "OK" | "FAIL" }> = feeds.map(
+        () => ({ name: "", count: 0, status: "FAIL" })
+    );
     let totalDiscovered = 0;
+    let nextFeed = 0;
 
-    for (const feed of feeds) {
+    async function fetchNextFeed(): Promise<void> {
+        const index = nextFeed++;
+        const feed = feeds[index];
+        if (!feed) return;
+        feedStats[index] = { name: feed.name, count: 0, status: "FAIL" };
         try {
             const content = await fetchSingleFeed(feed, config);
             const parsed = parseProxyFeedText(content, feed.defaultProtocol);
@@ -171,24 +209,30 @@ export async function downloadAllFeeds(config: AppConfig): Promise<{
                 const key = `${item.protocol}://${item.ip}:${item.port}`;
                 if (!seen.has(key)) {
                     seen.add(key);
-                    deduplicatedProxies.push(item);
+                    feedBuckets[index].push(item);
                     addedCount++;
                 }
             }
 
-            feedStats.push({ name: feed.name, count: parsed.length, status: "OK" });
+            feedStats[index] = { name: feed.name, count: parsed.length, status: "OK" };
             log(`  ${ansi.green}[OK]${ansi.reset} ${feed.name.padEnd(30)} ${parsed.length.toLocaleString().padStart(6)} routes (+${addedCount.toLocaleString()} new)`);
         } catch {
-            feedStats.push({ name: feed.name, count: 0, status: "FAIL" });
             log(`  ${ansi.yellow}[WARN]${ansi.reset} ${feed.name.padEnd(30)} Fetch failed (skipped)`);
         }
     }
 
+    // Small fixed pool: faster startup without a thundering herd of 10 downloads.
+    await Promise.all(
+        Array.from({ length: Math.min(FEED_FETCH_CONCURRENCY, feeds.length) }, () => fetchNextFeed())
+    );
+
+    const deduplicatedProxies = feedBuckets.flat();
     log(`\n${ansi.bold}Discovered ${totalDiscovered.toLocaleString()} candidate entries across ${feeds.length} feeds${ansi.reset}`);
     log(`${ansi.bold}${ansi.cyan}Deduplicated into ${deduplicatedProxies.length.toLocaleString()} unique routes via Set key normalization${ansi.reset}\n`);
 
     return {
         proxies: deduplicatedProxies,
+        feedBuckets,
         feedStats,
         totalDiscovered,
     };

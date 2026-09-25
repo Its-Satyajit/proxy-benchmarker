@@ -190,7 +190,7 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
                 showToast('No rows to export');
                 return;
             }
-            const headers = ['Rank', 'Score', 'Protocol', 'IP', 'Port', 'Country', 'Status', 'EgressIP', 'EgressProbesStarted', 'EgressProbesPassed', 'WebsitesAvailable', 'WebsitesAttempted', 'WebsitesPassed', 'WebPassRate%', 'PerfSource', 'AvgLatency_ms', 'MinLatency_ms', 'ConnectTime_ms', 'TTFB_ms', 'Speed_Bps', 'ProxyUrl'];
+            const headers = ['Rank', 'Score', 'Protocol', 'IP', 'Port', 'Country', 'Status', 'EgressIP', 'EgressEndpointsTotal', 'EgressProbesStarted', 'EgressProbesPassed', 'EgressCoverage%', 'EgressSuccess%', 'WebsitesAvailable', 'WebsitesAttempted', 'WebsitesPassed', 'WebPassRate%', 'PerfSource', 'AvgLatency_ms', 'MinLatency_ms', 'ConnectTime_ms', 'TTFB_ms', 'Speed_Bps', 'ProxyUrl'];
             const rows = filtered.map(b => [
                 b.rank || '',
                 b.compositeScore || 0,
@@ -202,6 +202,8 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
                 b.egressStatus || 'UNKNOWN',
                 b.endpointsStarted || 0,
                 b.endpointsPassed || 0,
+                b.endpointCoveragePercent || 0,
+                b.endpointPassRatePercent || 0,
                 b.websitesAvailable || 0,
                 b.websitesAttempted || 0,
                 b.websitesPassed || 0,
@@ -544,7 +546,7 @@ export function getClientScript(reportJsonString: string, svgIconsJson: string):
                         <div class="details-container">
                             <div class="tab-nav">
                                 <button class="tab-btn \${activeTab === 'websites' ? 'active' : ''}" onclick="switchSubTab('\${pKey}', 'websites')">\${SVG_ICONS.globe} Top 50 Websites (\${item.websitesPassed || 0}/\${item.websitesTotal || 50})</button>
-                                <button class="tab-btn \${activeTab === 'endpoints' ? 'active' : ''}" onclick="switchSubTab('\${pKey}', 'endpoints')">\${SVG_ICONS.search} Verification Endpoints (\${item.endpointsPassed || 0}/\${item.endpointsTotal || 11})</button>
+                                <button class="tab-btn \${activeTab === 'endpoints' ? 'active' : ''}" onclick="switchSubTab('\${pKey}', 'endpoints')">\${SVG_ICONS.search} Verification Endpoints (\${item.endpointsPassed || 0}/\${item.endpointsStarted || 0} started, \${item.endpointCoveragePercent || 0}% coverage)</button>
                             </div>
 
                             \${activeTab === 'websites' ? \`

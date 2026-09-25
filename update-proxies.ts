@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 
-import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import type { PresetName, Protocol, ProxyItem } from "./src/types.js";
+import type { Protocol, ProxyItem } from "./src/types.js";
 import { CONFIG, createConfig, presetFromEnv } from "./src/config.js";
-import { candidateLimit, parsePresetName, positiveInt } from "./src/limits.js";
 import { log, ansi } from "./src/terminal.js";
 import { checkDependencies, prepareEndpoints, prepareWebsiteTargets, getLocalPublicIp } from "./src/dns.js";
-import { downloadAllFeeds, parseCsv } from "./src/csv.js";
-import { deduplicateProxies, parseProxyString } from "./src/proxy.js";
+import { downloadAllFeeds, interleaveByFeed } from "./src/csv.js";
+import { deduplicateProxies } from "./src/proxy.js";
 import { runProxyTests } from "./src/tester.js";
+import { configureCurlGate } from "./src/curl-gate.js";
 import {
     writeProxyFiles,
     generateHtmlReport,
@@ -18,169 +17,7 @@ import {
     atomicWrite,
     printSummary
 } from "./src/reporter.js";
-
-interface CliOptions {
-    customProxies: ProxyItem[];
-    limit?: number;
-    concurrency?: number;
-    tcpConcurrency?: number;
-    websiteWorkers?: number;
-    websiteConcurrency?: number;
-    maxCurlProcesses?: number;
-    preset?: PresetName;
-    strictTls?: boolean;
-    showHelp?: boolean;
-}
-
-/** Rejects NaN/0/negative input up front instead of letting a stage clamp it. */
-function requireInt(raw: string | undefined, flag: string, allowZero = false): number {
-    if (raw === undefined || raw.trim() === "") {
-        throw new Error(`${flag} requires a value`);
-    }
-    const value = Number(raw.trim());
-    if (!Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
-        throw new Error(`${flag} must be an integer >= ${allowZero ? 0 : 1} (got "${raw}")`);
-    }
-    return value;
-}
-
-async function parseCliArgs(rawArgs: string[]): Promise<CliOptions> {
-    const customProxies: ProxyItem[] = [];
-    const options: CliOptions = { customProxies, showHelp: false };
-
-    for (let i = 0; i < rawArgs.length; i++) {
-        const arg = rawArgs[i];
-        if (arg === "-h" || arg === "--help") {
-            options.showHelp = true;
-            continue;
-        }
-        if (arg === "-n" || arg === "--limit") {
-            options.limit = candidateLimit(requireInt(rawArgs[++i], "--limit", true), "--limit");
-            continue;
-        }
-        if (arg.startsWith("--limit=")) {
-            options.limit = candidateLimit(requireInt(arg.split("=")[1], "--limit", true), "--limit");
-            continue;
-        }
-        if (arg === "-c" || arg === "--concurrency") {
-            options.concurrency = positiveInt(requireInt(rawArgs[++i], "--concurrency"), "--concurrency");
-            continue;
-        }
-        if (arg.startsWith("--concurrency=")) {
-            options.concurrency = positiveInt(requireInt(arg.split("=")[1], "--concurrency"), "--concurrency");
-            continue;
-        }
-        if (arg === "--tcp-concurrency") {
-            options.tcpConcurrency = positiveInt(requireInt(rawArgs[++i], "--tcp-concurrency"), "--tcp-concurrency");
-            continue;
-        }
-        if (arg.startsWith("--tcp-concurrency=")) {
-            options.tcpConcurrency = positiveInt(requireInt(arg.split("=")[1], "--tcp-concurrency"), "--tcp-concurrency");
-            continue;
-        }
-        if (arg === "--website-workers") {
-            options.websiteWorkers = positiveInt(requireInt(rawArgs[++i], "--website-workers"), "--website-workers");
-            continue;
-        }
-        if (arg.startsWith("--website-workers=")) {
-            options.websiteWorkers = positiveInt(requireInt(arg.split("=")[1], "--website-workers"), "--website-workers");
-            continue;
-        }
-        if (arg === "--max-curl") {
-            options.maxCurlProcesses = positiveInt(requireInt(rawArgs[++i], "--max-curl"), "--max-curl");
-            continue;
-        }
-        if (arg.startsWith("--max-curl=")) {
-            options.maxCurlProcesses = positiveInt(requireInt(arg.split("=")[1], "--max-curl"), "--max-curl");
-            continue;
-        }
-        if (arg === "--strict-tls") {
-            options.strictTls = true;
-            continue;
-        }
-        if (arg === "--safe") {
-            options.preset = "safe";
-            continue;
-        }
-        if (arg === "--home") {
-            options.preset = "home";
-            continue;
-        }
-        if (arg === "--turbo" || arg === "--vps") {
-            options.preset = "turbo";
-            continue;
-        }
-        if (arg.startsWith("--preset=")) {
-            options.preset = parsePresetName(arg.split("=")[1], "--preset");
-            continue;
-        }
-        if (arg.startsWith("-")) {
-            continue;
-        }
-
-        // Check if argument is a local file
-        try {
-            const stat = await fs.stat(arg);
-            if (stat.isFile()) {
-                const content = await fs.readFile(arg, "utf8");
-                const parsed = parseCsv(content);
-                customProxies.push(...parsed);
-                continue;
-            }
-        } catch {
-            // Not a file, try parsing as proxy string
-        }
-
-        const parsed = parseProxyString(arg);
-        if (parsed.length > 0) {
-            customProxies.push(...parsed);
-        }
-    }
-
-    return options;
-}
-
-function printHelp(): void {
-    log(`
-Proxy Benchmark & Network Telemetry Suite
-
-Usage:
-  nub update-proxies.ts [options] [proxy...] [file...]
-  curl -fsSL https://.../run.sh | bash -s -- [options] [proxy...]
-  irm https://.../run.ps1 | iex [options] [proxy...]
-
-Examples:
-  # Benchmark with the default safe preset
-  nub update-proxies.ts
-
-  # Benchmark with home-router defaults (larger run)
-  nub update-proxies.ts --home
-
-  # Benchmark with ultra-gentle mode for sensitive/budget WiFi routers
-  nub update-proxies.ts --safe
-
-  # Benchmark high-speed mode on VPS / Gigabit servers
-  nub update-proxies.ts --turbo
-
-  # Benchmark a single specific proxy route
-  nub update-proxies.ts socks5://64.227.186.105:1080
-
-  # Benchmark custom list from file
-  nub update-proxies.ts my-proxies.txt
-
-Options:
-  --safe              Gentle profile (500 candidates, 35 TCP sockets, 12 verification workers, 4 website workers, 16 global curl) - default
-  --home              Home profile (2,000 candidates, 80 TCP sockets, 25 verification workers, 8 website workers, 64 global curl)
-  --turbo, --vps      High-performance profile (1,500 TCP sockets, 300 verification workers, 100 website workers, 1,500 global curl)
-  -c, --concurrency   Override Stage 2 verification worker count
-  --tcp-concurrency   Override Stage 1 parallel TCP socket count
-  --website-workers   Override Stage 3 proxy worker count
-  --max-curl          Global ceiling on concurrent curl processes
-  -n, --limit <num>   Candidate cap (0 = unlimited)
-  --strict-tls        Verify TLS certificates instead of permissive transport probing
-  -h, --help          Show this help message
-`);
-}
+import { parseCliArgs, printHelp } from "./src/cli.js";
 
 /* ============================================================
  * Main Workflow
@@ -205,6 +42,9 @@ async function main(): Promise<void> {
         tlsVerify: options.strictTls,
     });
     Object.assign(CONFIG, resolved);
+    // Enforce the curl ceiling for the whole run, including feed downloads and
+    // the origin-IP lookup, not just the benchmark stages.
+    configureCurlGate(CONFIG.maxCurlProcesses);
 
     const effectiveLimit = CONFIG.limit;
 
@@ -266,7 +106,7 @@ async function main(): Promise<void> {
         log("========================================");
         log("");
 
-        const { proxies: feedProxies } = await downloadAllFeeds(CONFIG);
+        const { proxies: feedProxies, feedBuckets } = await downloadAllFeeds(CONFIG);
         proxies = feedProxies;
 
         if (proxies.length === 0) {
@@ -274,8 +114,10 @@ async function main(): Promise<void> {
         }
 
         if (effectiveLimit > 0 && effectiveLimit < proxies.length) {
-            log(`  Limiting benchmark to first ${effectiveLimit} candidates (LIMIT=${effectiveLimit})`);
-            proxies = proxies.slice(0, effectiveLimit);
+            // Round-robin across feeds: reproducible, and not dominated by whichever
+            // feed happens to be fetched first.
+            proxies = interleaveByFeed(feedBuckets, effectiveLimit);
+            log(`  Limited to ${proxies.length.toLocaleString()} candidates, sampled round-robin across ${feedBuckets.length} feeds (LIMIT=${effectiveLimit})`);
         }
 
         const discovered: Record<Protocol, number> = { http: 0, https: 0, socks4: 0, socks5: 0 };

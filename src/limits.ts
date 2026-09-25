@@ -97,7 +97,7 @@ export function positiveInt(value: number, name: string, max = MAX_WORKERS): num
 
 export function positiveSeconds(value: number, name: string): number {
     if (!Number.isFinite(value) || value <= 0 || value > MAX_TIMEOUT_SECONDS) {
-        throw new Error(`${name} must be a number between 0 and ${MAX_TIMEOUT_SECONDS} seconds (got ${value})`);
+        throw new Error(`${name} must be greater than 0 and at most ${MAX_TIMEOUT_SECONDS} seconds (got ${value})`);
     }
     return value;
 }
