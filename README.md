@@ -97,7 +97,7 @@ You can configure any benchmark setting through environment variables.
 
 ### BullMQ worker
 
-The production server runs a BullMQ worker backed by Redis or Valkey. Configure `REDIS_HOST` and `REDIS_PORT` (or `REDIS_URL`), `REDIS_PASSWORD`, and an environment-specific `BULLMQ_PREFIX`. `BULLMQ_CRON` uses BullMQ's six-field format (`seconds minutes hours day month weekday`); the default is `0 0 * * * *` (hourly at minute 0 UTC). `CRON` remains accepted as a five-field migration alias.
+The production server runs a BullMQ worker backed by Redis or Valkey. Configure `REDIS_HOST` and `REDIS_PORT` (or `REDIS_URL`), `REDIS_PASSWORD`, and an environment-specific `BULLMQ_PREFIX`. `BULLMQ_CRON` uses BullMQ's six-field format (`seconds minutes hours day month weekday`); the default is `0 0 * * * *` (hourly at minute 0 UTC).
 
 A benchmark can be queued manually with `POST /jobs/benchmark` and `Authorization: Bearer $MANUAL_TRIGGER_KEY`. The request returns a BullMQ job ID; the benchmark runs asynchronously. Set `GITHUB_TOKEN` (with repository contents write access) to publish verified results and trigger the GitHub Pages workflow. A zero-pass result is never published.
 

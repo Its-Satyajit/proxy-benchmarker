@@ -194,7 +194,7 @@ function queuePrefix() {
   return process2.env.BULLMQ_PREFIX?.trim() || DEFAULT_QUEUE_PREFIX;
 }
 function cronPattern() {
-  const configured = process2.env.BULLMQ_CRON?.trim() || process2.env.CRON?.trim() || DEFAULT_CRON;
+  const configured = process2.env.BULLMQ_CRON?.trim() || DEFAULT_CRON;
   const fields = configured.split(/\s+/);
   if (fields.length === 5) return `0 ${configured}`;
   if (fields.length !== 6) {

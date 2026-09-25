@@ -66,8 +66,7 @@ function queuePrefix(): string {
 }
 
 function cronPattern(): string {
-    const configured =
-        process.env.BULLMQ_CRON?.trim() || process.env.CRON?.trim() || DEFAULT_CRON;
+    const configured = process.env.BULLMQ_CRON?.trim() || DEFAULT_CRON;
     const fields = configured.split(/\s+/);
     if (fields.length === 5) return `0 ${configured}`;
     if (fields.length !== 6) {
