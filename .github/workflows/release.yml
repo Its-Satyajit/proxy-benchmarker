@@ -22,6 +22,8 @@ on:
 
 permissions:
   contents: write
+  # Required to dispatch the CI workflow on the sync commit below.
+  actions: write
 
 concurrency:
   group: release-bundle
