@@ -13,12 +13,20 @@ A 3-stage non-blocking pipeline evaluates 26,000+ candidate routes in under 90 s
 ### Linux & macOS
 
 ```bash
+# Fast global CDN (jsDelivr)
+curl -fsSL https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.sh | bash
+
+# GitHub Raw fallback
 curl -fsSL https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
+# Fast global CDN (jsDelivr)
+irm https://cdn.jsdelivr.net/gh/Its-Satyajit/proxy-benchmarker@master/run.ps1 | iex
+
+# GitHub Raw fallback
 irm https://raw.githubusercontent.com/Its-Satyajit/proxy-benchmarker/master/run.ps1 | iex
 ```
 
@@ -183,6 +191,7 @@ Pushes to `master` trigger `.github/workflows/release.yml`, which runs `tsc --no
 ## Upstream projects and data sources
 
 * [proxifly/free-proxy-list](https://github.com/proxifly/free-proxy-list) for raw proxy list data.
+* [jsDelivr](https://www.jsdelivr.com) for high-performance global edge CDN delivery.
 * [cURL](https://curl.se) for network probing.
 * [Iconify](https://iconify.design) for SVG vector icons.
 * [Nub](https://nubjs.com) for Node toolchain execution.
