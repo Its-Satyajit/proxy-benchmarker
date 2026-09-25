@@ -67,4 +67,4 @@ Run it from **GitHub Actions → Update Proxies & Publish Report → Run workflo
 
 - A normal run executes the standalone benchmark bundle, updates the proxy files and telemetry on `master`, and deploys the HTML report to GitHub Pages.
 - Set the `deploy_only` input to `true` to publish the existing report without running another benchmark.
-- CI output files are `http.txt`, `https.txt`, `socks4.txt`, `socks5.txt`, `benchmark-report.json`, and `benchmark-report.html`.
+- Benchmark output files are generated during the workflow and committed to `master` only when the run produces verified results.
