@@ -1,10 +1,17 @@
 import process from "node:process";
-import { Queue, Worker, type ConnectionOptions } from "bullmq";
+import { Queue, Worker, type ConnectionOptions, type JobsOptions } from "bullmq";
 import { runProxyBenchmarkJob, type BenchmarkStats, type CommitResult, type PagesResult } from "./jobs/proxy-benchmark.js";
 
 export const PROXY_QUEUE_NAME = "proxy-benchmark";
 const SCHEDULER_ID = "proxy-benchmark-hourly";
-const DEFAULT_CRON = "0 * * * * *";
+// BullMQ cron fields are: seconds, minutes, hours, day, month, weekday.
+const DEFAULT_CRON = "0 0 * * * *";
+const BENCHMARK_JOB_OPTIONS: JobsOptions = {
+    attempts: 2,
+    backoff: { type: "exponential", delay: 60_000 },
+    removeOnComplete: 10,
+    removeOnFail: 50,
+};
 
 type BenchmarkJobData = Record<string, never>;
 type BenchmarkJobResult = {
@@ -70,22 +77,21 @@ export async function startBullMq(): Promise<BullMqRuntime> {
     worker.on("error", (error) => {
         console.error(`[bullmq] worker error: ${error.message}`);
     });
+    queue.on("error", (error) => {
+        console.error(`[bullmq] queue error: ${error.message}`);
+    });
 
     try {
         await queue.waitUntilReady();
         const pattern = cronPattern();
+        await queue.removeJobScheduler(SCHEDULER_ID);
         await queue.upsertJobScheduler(
             SCHEDULER_ID,
             { pattern, tz: "UTC" },
             {
                 name: "benchmark",
                 data: {},
-                opts: {
-                    attempts: 2,
-                    backoff: { type: "exponential", delay: 60_000 },
-                    removeOnComplete: 10,
-                    removeOnFail: 50,
-                },
+                opts: { ...BENCHMARK_JOB_OPTIONS },
             }
         );
         console.log(`[bullmq] connected; scheduler ${SCHEDULER_ID} uses ${pattern} UTC`);
@@ -103,4 +109,12 @@ export async function startBullMq(): Promise<BullMqRuntime> {
             await queue.close();
         },
     };
+}
+
+export async function enqueueManualBenchmark(queue: BullMqRuntime["queue"]): Promise<string> {
+    const job = await queue.add("benchmark-manual", {}, { ...BENCHMARK_JOB_OPTIONS });
+    if (!job.id) {
+        throw new Error("BullMQ did not return a job ID.");
+    }
+    return job.id;
 }

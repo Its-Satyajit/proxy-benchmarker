@@ -1,6 +1,9 @@
 import http from "node:http";
 import process from "node:process";
-import { startBullMq, type BullMqRuntime } from "./bullmq.js";
+import { timingSafeEqual } from "node:crypto";
+import { enqueueManualBenchmark, startBullMq, type BullMqRuntime } from "./bullmq.js";
+
+const MANUAL_BENCHMARK_PATH = "/jobs/benchmark";
 
 type QueueState = "starting" | "ready" | "error";
 
@@ -17,7 +20,19 @@ function sendJson(
     response.end(JSON.stringify(body));
 }
 
-const server = http.createServer((req, res) => {
+function hasManualTriggerKey(request: http.IncomingMessage): boolean {
+    const configuredKey = process.env.MANUAL_TRIGGER_KEY;
+    const authorization = request.headers.authorization;
+    if (!configuredKey || !authorization?.startsWith("Bearer ")) {
+        return false;
+    }
+
+    const providedKey = Buffer.from(authorization.slice("Bearer ".length));
+    const expectedKey = Buffer.from(configuredKey);
+    return providedKey.length === expectedKey.length && timingSafeEqual(providedKey, expectedKey);
+}
+
+const server = http.createServer(async (req, res) => {
     if (req.url === "/" || req.url === "/health") {
         sendJson(res, 200, {
             status: "OK",
@@ -35,6 +50,43 @@ const server = http.createServer((req, res) => {
             service: "proxy-benchmarker-bullmq",
             queue: queueState,
         });
+        return;
+    }
+
+    if (req.url === MANUAL_BENCHMARK_PATH) {
+        if (req.method !== "POST") {
+            sendJson(res, 405, { error: "Use POST for this endpoint." });
+            return;
+        }
+
+        if (!process.env.MANUAL_TRIGGER_KEY) {
+            sendJson(res, 503, { error: "Manual benchmark trigger is not configured." });
+            return;
+        }
+
+        if (!hasManualTriggerKey(req)) {
+            sendJson(res, 401, { error: "Unauthorized" });
+            return;
+        }
+
+        if (!queueRuntime || queueState !== "ready") {
+            sendJson(res, 503, { error: "Benchmark queue is not ready." });
+            return;
+        }
+
+        try {
+            const jobId = await enqueueManualBenchmark(queueRuntime.queue);
+            console.log(`[server] manually queued benchmark job ${jobId}`);
+            sendJson(res, 202, {
+                status: "queued",
+                queue: "proxy-benchmark",
+                jobId,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error(`[server] manual benchmark enqueue failed: ${message}`);
+            sendJson(res, 500, { error: "Could not queue benchmark." });
+        }
         return;
     }
 

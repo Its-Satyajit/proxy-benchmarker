@@ -1,6 +1,7 @@
 // src/server.ts
 import http from "node:http";
 import process3 from "node:process";
+import { timingSafeEqual } from "node:crypto";
 
 // src/bullmq.ts
 import process2 from "node:process";
@@ -147,7 +148,13 @@ async function runProxyBenchmarkJob() {
 // src/bullmq.ts
 var PROXY_QUEUE_NAME = "proxy-benchmark";
 var SCHEDULER_ID = "proxy-benchmark-hourly";
-var DEFAULT_CRON = "0 * * * * *";
+var DEFAULT_CRON = "0 0 * * * *";
+var BENCHMARK_JOB_OPTIONS = {
+  attempts: 2,
+  backoff: { type: "exponential", delay: 6e4 },
+  removeOnComplete: 10,
+  removeOnFail: 50
+};
 function redisConnection() {
   const url = process2.env.REDIS_URL?.trim();
   if (url) {
@@ -193,21 +200,20 @@ async function startBullMq() {
   worker.on("error", (error) => {
     console.error(`[bullmq] worker error: ${error.message}`);
   });
+  queue.on("error", (error) => {
+    console.error(`[bullmq] queue error: ${error.message}`);
+  });
   try {
     await queue.waitUntilReady();
     const pattern = cronPattern();
+    await queue.removeJobScheduler(SCHEDULER_ID);
     await queue.upsertJobScheduler(
       SCHEDULER_ID,
       { pattern, tz: "UTC" },
       {
         name: "benchmark",
         data: {},
-        opts: {
-          attempts: 2,
-          backoff: { type: "exponential", delay: 6e4 },
-          removeOnComplete: 10,
-          removeOnFail: 50
-        }
+        opts: { ...BENCHMARK_JOB_OPTIONS }
       }
     );
     console.log(`[bullmq] connected; scheduler ${SCHEDULER_ID} uses ${pattern} UTC`);
@@ -225,8 +231,16 @@ async function startBullMq() {
     }
   };
 }
+async function enqueueManualBenchmark(queue) {
+  const job = await queue.add("benchmark-manual", {}, { ...BENCHMARK_JOB_OPTIONS });
+  if (!job.id) {
+    throw new Error("BullMQ did not return a job ID.");
+  }
+  return job.id;
+}
 
 // src/server.ts
+var MANUAL_BENCHMARK_PATH = "/jobs/benchmark";
 var queueState = "starting";
 var queueRuntime;
 var shuttingDown = false;
@@ -234,7 +248,17 @@ function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, { "Content-Type": "application/json" });
   response.end(JSON.stringify(body));
 }
-var server = http.createServer((req, res) => {
+function hasManualTriggerKey(request) {
+  const configuredKey = process3.env.MANUAL_TRIGGER_KEY;
+  const authorization = request.headers.authorization;
+  if (!configuredKey || !authorization?.startsWith("Bearer ")) {
+    return false;
+  }
+  const providedKey = Buffer.from(authorization.slice("Bearer ".length));
+  const expectedKey = Buffer.from(configuredKey);
+  return providedKey.length === expectedKey.length && timingSafeEqual(providedKey, expectedKey);
+}
+var server = http.createServer(async (req, res) => {
   if (req.url === "/" || req.url === "/health") {
     sendJson(res, 200, {
       status: "OK",
@@ -251,6 +275,38 @@ var server = http.createServer((req, res) => {
       service: "proxy-benchmarker-bullmq",
       queue: queueState
     });
+    return;
+  }
+  if (req.url === MANUAL_BENCHMARK_PATH) {
+    if (req.method !== "POST") {
+      sendJson(res, 405, { error: "Use POST for this endpoint." });
+      return;
+    }
+    if (!process3.env.MANUAL_TRIGGER_KEY) {
+      sendJson(res, 503, { error: "Manual benchmark trigger is not configured." });
+      return;
+    }
+    if (!hasManualTriggerKey(req)) {
+      sendJson(res, 401, { error: "Unauthorized" });
+      return;
+    }
+    if (!queueRuntime || queueState !== "ready") {
+      sendJson(res, 503, { error: "Benchmark queue is not ready." });
+      return;
+    }
+    try {
+      const jobId = await enqueueManualBenchmark(queueRuntime.queue);
+      console.log(`[server] manually queued benchmark job ${jobId}`);
+      sendJson(res, 202, {
+        status: "queued",
+        queue: "proxy-benchmark",
+        jobId
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[server] manual benchmark enqueue failed: ${message}`);
+      sendJson(res, 500, { error: "Could not queue benchmark." });
+    }
     return;
   }
   res.writeHead(404, { "Content-Type": "text/plain" });
