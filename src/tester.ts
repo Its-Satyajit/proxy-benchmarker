@@ -125,7 +125,8 @@ export function extractIp(body: string, parser: "plain" | "ipme"): string | null
 export async function testProxyEndpoint(
     proxy: ProxyItem,
     endpoint: TestEndpoint,
-    config: AppConfig
+    config: AppConfig,
+    signal?: AbortSignal
 ): Promise<EndpointProbeResult> {
     const target = parseUrl(endpoint.url);
     const writeOutFormat = "\n__BENCHMARK__:%{http_code}:%{time_connect}:%{time_appconnect}:%{time_starttransfer}:%{time_total}:%{speed_download}:%{size_download}";
@@ -161,6 +162,7 @@ export async function testProxyEndpoint(
             timeout: timeoutMs,
             maxBuffer: 1024 * 1024,
             windowsHide: true,
+            signal,
         });
         stdout = res.stdout || "";
         stderr = res.stderr || "";
@@ -414,9 +416,11 @@ export async function verifyProxyHealth(
     }
 
     // Parallel fast verification with Promise.any across top 2 endpoints
+    // The losing probe is aborted so its curl process does not linger.
     const candidateEndpoints = endpoints.slice(0, 2);
+    const abort = new AbortController();
     const probePromises = candidateEndpoints.map(async (ep) => {
-        const res = await testProxyEndpoint(proxy, ep, config);
+        const res = await testProxyEndpoint(proxy, ep, config, abort.signal);
         if (res.ok) {
             return res;
         }
@@ -425,6 +429,7 @@ export async function verifyProxyHealth(
 
     try {
         const fastestSuccess = await Promise.any(probePromises);
+        abort.abort();
         return {
             isAlive: true,
             exitIp: fastestSuccess.returnedIp,
