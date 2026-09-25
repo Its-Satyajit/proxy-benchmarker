@@ -25,15 +25,31 @@ export const updateProxiesCron = inngest.createFunction(
                 timeout: 300_000,
                 maxBuffer: 10 * 1024 * 1024,
             });
+            const report = JSON.parse(
+                await fs.readFile(path.resolve(process.cwd(), "benchmark-report.json"), "utf8")
+            ) as { stats?: { passed?: number } };
+            const passed = report.stats?.passed;
+
+            if (typeof passed !== "number" || !Number.isSafeInteger(passed) || passed < 0) {
+                throw new Error("Benchmark report has no valid passed count; refusing to publish.");
+            }
 
             return {
                 completedAt: new Date().toISOString(),
+                passed,
                 summary: stdout.slice(-800),
             };
         });
 
+        const shouldPublish = stats.passed > 0;
+        const emptyResultReason = "Benchmark produced no verified proxies; existing lists preserved.";
+
         // Step 2: Push updated proxy files to GitHub master branch (0 runner minutes)
         const commitResult = await step.run("commit-to-github", async () => {
+            if (!shouldPublish) {
+                return { skipped: true, reason: emptyResultReason };
+            }
+
             const token = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
             if (!token) {
                 return { skipped: true, reason: "No GITHUB_TOKEN or GITHUB_PAT configured." };
@@ -96,6 +112,10 @@ export const updateProxiesCron = inngest.createFunction(
 
         // Step 3: Deploy HTML report to gh-pages branch (0 runner minutes)
         const pagesResult = await step.run("deploy-to-gh-pages", async () => {
+            if (!shouldPublish) {
+                return { skipped: true, reason: emptyResultReason };
+            }
+
             const token = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
             if (!token) return { skipped: true };
 
