@@ -402,9 +402,14 @@ export async function verifyProxyHealth(
 ): Promise<{ isAlive: boolean; exitIp: string | null; endpointResults: EndpointProbeResult[] }> {
     const endpointResults: EndpointProbeResult[] = [];
     let exitIp: string | null = null;
+    const maxAttempts = config.fullBenchmark ? endpoints.length : Math.min(2, endpoints.length);
 
-    // Test endpoints until at least one succeeds
-    for (const endpoint of endpoints) {
+    // Test endpoints until at least one succeeds or max fast attempts reached
+    for (let i = 0; i < endpoints.length; i++) {
+        if (i >= maxAttempts && !exitIp) break;
+        const endpoint = endpoints[i];
+        if (!endpoint) continue;
+
         const epResult = await testProxyEndpoint(proxy, endpoint, config);
         endpointResults.push(epResult);
 
@@ -615,7 +620,7 @@ export async function runProxyTests(
             );
         }
 
-        const stage3Concurrency = Math.min(Math.max(Math.floor(stage2Concurrency / 10), 5), 15, aliveCandidates.length);
+        const stage3Concurrency = Math.min(Math.max(Math.floor(stage2Concurrency / 3), 5), config.concurrency, aliveCandidates.length);
 
         async function workerStage3() {
             while (true) {

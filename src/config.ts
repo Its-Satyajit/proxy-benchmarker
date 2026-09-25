@@ -18,8 +18,8 @@ const PRESET_DEFAULTS: Record<PresetMode, { tcpConcurrency: number; concurrency:
         websiteConcurrency: 3,
     },
     turbo: {
-        tcpConcurrency: 600,
-        concurrency: 150,
+        tcpConcurrency: 1200,
+        concurrency: 250,
         websiteConcurrency: 15,
     },
 };

@@ -168,8 +168,8 @@ async function main(): Promise<void> {
         CONFIG.concurrency = 25;
         CONFIG.websiteConcurrency = 5;
     } else if (preset === "turbo") {
-        CONFIG.tcpConcurrency = 600;
-        CONFIG.concurrency = 150;
+        CONFIG.tcpConcurrency = 1200;
+        CONFIG.concurrency = 250;
         CONFIG.websiteConcurrency = 15;
     }
 
